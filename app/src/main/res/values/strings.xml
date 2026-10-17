@@ -336,11 +336,11 @@
     <string name="section_voice">Voice</string>
     <string name="pref_voice_style_title">Voice</string>
     <string name="voice_cog">Cog</string>
-    <string name="voice_cog_body">Cog\'s own voice, made for this app and spoken on the phone. English only: Greek uses Robot Cog</string>
-    <string name="voice_robot_cog">Robot Cog</string>
-    <string name="voice_robot_cog_body">A polite little robot with a metallic shimmer</string>
+    <string name="voice_cog_body">A polite little robot with a metallic shimmer</string>
     <string name="voice_natural">Natural</string>
     <string name="voice_natural_body">The phone\'s voice, no effects</string>
+    <string name="voice_android">Android</string>
+    <string name="voice_android_body">The natural voice with a light electronic edge</string>
     <string name="voice_classic">Classic robot</string>
     <string name="voice_classic_body">Flat and buzzy, straight out of a 1950s film</string>
     <string name="voice_tiny">Tiny bot</string>

@@ -4,7 +4,7 @@ A privacy-first replacement for the default Android assistant (Gemini). It's bui
 FastSearch, an earlier search-bar app: say **“ok Cog”** or invoke the assistant gesture and
 the frosted search bar drops in, keyboard up and microphone already listening. Speak or type, and
 Cog either searches (apps, contacts, maths, web) or **does what you asked and tells you
-so out loud**, in its own voice: sets alarms and timers, plays music on Spotify,
+so out loud**, in a polite little robot voice: sets alarms and timers, plays music on Spotify,
 reads the weather, answers "what is…" from Wikipedia, toggles the flashlight, controls volume and
 media, converts units, tells the time anywhere, and calls and texts people. In English and Greek.
 
@@ -53,35 +53,14 @@ the overlay is open. It needs *display over other apps* to pop up over other app
 posts a "tap to talk" notification). On the lock screen it asks you to unlock first. After a
 reboot Android won't let it start listening by itself, so it posts a one-tap reminder.
 
-**Speaking.** *Settings › Voice*: **Cog** is the assistant's own voice, a voice model trained on
-the PC (see [The Cog voice](#the-cog-voice)) that runs on the phone, offline. It speaks English;
-in Greek it falls back to **Robot Cog**. The other styles, Robot Cog (polite
-robot with a metallic shimmer), Natural, Classic robot, Tiny bot and Big bot, each **Male** or
-**Female**, are the phone's offline text-to-speech, reshaped with classic DSP (flanger, ring modulation, comb filter). Engines don't
+**Speaking.** *Settings › Voice*: Cog (polite robot with a metallic shimmer), Natural, Classic
+robot, Tiny bot or Big bot, each **Male** or **Female**. Voices are the phone's offline
+text-to-speech, reshaped with classic DSP (flanger, ring modulation, comb filter). Engines don't
 say which voices are male, so each voice's pitch is measured once on the phone; if there's no
 voice of the wanted kind (Google's Greek voice is female), the voice is resampled to move its
 formants and pitch, with the engine speaking faster to keep the tempo. *Base voice* lists the
 phone's voices labelled male/female. *Spoken replies* chooses when it talks: always, after voice
 only, or never.
-
-## The Cog voice
-
-The *Cog* voice is a [Piper](https://github.com/OHF-Voice/piper1-gpl) (VITS) model, run on the
-phone by [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) with espeak-ng for pronunciation.
-It lives in `app/src/main/assets/cog/` (`cog.onnx`, `tokens.txt`, English `espeak-ng-data`).
-It is made on the PC from a short reference recording, by the scripts in `voice/`:
-
-1. `transcribe.py`: Whisper transcribes the cut lines (`work/segs/`, checked by hand).
-2. `make_corpus.py` + `clone.py`: F5-TTS clones the voice from those lines and reads about
-   1,700 sentences in it: the assistant's own replies filled with varied values, the CMU ARCTIC
-   prompts, and encyclopedia-style sentences. `check_clips.py` drops clips Whisper can't match
-   to their text.
-3. `train.sh`: fine-tunes the British *alan* Piper voice on them in Docker (GPU; `Dockerfile`).
-4. `package_model.py --install` adds sherpa-onnx's metadata and token list and copies the model
-   into the app; `try_voice.py` speaks test lines through sherpa-onnx on the PC.
-
-The reference recording, the generated training data and the trained `cog.onnx` are not part of
-the repository. Without the model the app builds and runs as usual and speaks with Robot Cog.
 
 ## Spotify
 
@@ -183,7 +162,6 @@ app/src/main/java/
 │   ├── speech/
 │   │   ├── Responder.kt            the reply template for every scenario
 │   │   ├── Speaker.kt              text-to-speech, voice choice, streaming playback
-│   │   ├── CogVoice.kt             Cog's voice model on the phone (sherpa-onnx)
 │   │   ├── VoiceStyle.kt           voice styles and male/female
 │   │   ├── RobotVoice.kt           robot effects and the wake chirp
 │   │   ├── Pitch.kt                pitch measurement and male/female resampling
@@ -210,8 +188,8 @@ app/src/main/java/
   looks at Spotify's screen only for a few seconds after you ask to play something, taps one
   button, and stores or sends nothing.
 - Web suggestions and instant answers send what you type to DuckDuckGo, as in FastSearch.
-- Voice requests use the system recognizer, preferring offline recognition. Replies are spoken
-  on the device: the Cog voice model, or the phone's offline text-to-speech.
+- Voice requests use the system recognizer, preferring offline recognition. Replies use an
+  on-device text-to-speech voice.
 - Permissions are requested only when a feature needs them: contacts, coarse location,
   microphone, notifications (the wake word's status), display over other apps (the wake word),
   notification access (media control). Calls open the dialer pre-filled, so there's no

@@ -30,9 +30,33 @@ class RobotVoiceTest {
 
     @Test
     fun effectsChangeTheSound() {
-        val out = RobotVoice.process(tone, rate, VoiceStyle.ROBOT_COG.effect!!)
+        val out = RobotVoice.process(tone, rate, VoiceStyle.COG.effect!!)
         val difference = tone.indices.count { abs(out[it] - tone[it]) > 500 }
         assertTrue(difference > tone.size / 4)
+    }
+
+    @Test
+    fun robotisingSpeaksOnOneFlatNote() {
+        val out = RobotVoice.process(tone, rate, RobotEffect(robotMix = 1f, robotHz = 150f))
+        assertEquals(150f, Pitch.median(out, rate)!!, 8f)
+    }
+
+    @Test
+    fun androidKeepsTheNaturalVoiceAndItsTiming() {
+        // Speech then silence: the silence must stay silent, and the speech mostly unchanged.
+        val input = tone + ShortArray(rate / 4)
+        val out = RobotVoice.process(input, rate, VoiceStyle.ANDROID.effect!!)
+        assertEquals(input.size, out.size)
+        assertTrue(out.takeLast(rate / 8).all { abs(it.toInt()) < 200 })
+        var cross = 0.0
+        var a = 0.0
+        var b = 0.0
+        for (i in tone.indices) {
+            cross += input[i] * out[i].toDouble()
+            a += input[i] * input[i].toDouble()
+            b += out[i] * out[i].toDouble()
+        }
+        assertTrue(cross / Math.sqrt(a * b) > 0.6)
     }
 
     @Test

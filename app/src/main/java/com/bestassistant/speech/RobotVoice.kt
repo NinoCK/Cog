@@ -2,15 +2,18 @@ package com.bestassistant.speech
 
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.math.tanh
 
 /**
- * Classic signal processing that turns a plain text-to-speech voice into a robot: a flanger for
- * electronic doubling, ring modulation for the metallic buzz, and a short feedback comb filter for
- * the "voice inside a tin can" resonance. Deterministic, offline, and fast enough to run on a
+ * Classic signal processing that turns a plain text-to-speech voice into a robot: phase-vocoder
+ * robotisation for a flat electronic buzz, a flanger for electronic doubling, ring modulation for
+ * the metallic buzz, and a short feedback comb filter for the "voice inside a tin can" resonance. Deterministic, offline, and fast enough to run on a
  * sentence before it's played.
  */
 object RobotVoice {
@@ -20,12 +23,98 @@ object RobotVoice {
         val rate = sampleRate.toFloat()
         var x = FloatArray(input.size) { input[it] / 32768f }
 
+        if (fx.robotMix > 0f) {
+            val hz = fx.robotHz.takeIf { it > 0f } ?: Pitch.median(input, sampleRate) ?: DEFAULT_ROBOT_HZ
+            x = robotize(x, rate, hz.coerceIn(70f, 400f), fx.robotMix)
+        }
         if (fx.highPassHz > 0f) x = highPass(x, rate, fx.highPassHz)
         if (fx.flangeMix > 0f) x = flange(x, rate, fx)
         if (fx.ringMix > 0f) ringModulate(x, rate, fx.ringHz, fx.ringMix)
         if (fx.combMix > 0f) x = comb(x, rate, fx.combMs, fx.combFeedback, fx.combMix)
         if (fx.crushBits in 2..15) crush(x, fx.crushBits)
         return toPcm(x)
+    }
+
+    /**
+     * Phase-vocoder robotisation: each short frame keeps the magnitudes of its spectrum but loses
+     * its phases, which turns it into a single buzz pulse with the same formants. A pulse every
+     * 1/[hz] seconds makes the voice speak the same words, at the same speed, on one flat note.
+     * Mixed under the dry voice it keeps the natural tone and adds an electronic edge.
+     */
+    private fun robotize(x: FloatArray, rate: Float, hz: Float, mix: Float): FloatArray {
+        val hop = (rate / hz).roundToInt().coerceAtLeast(1)
+        // About 10 ms, short enough not to resolve the voice's own harmonics, and two hops at least.
+        val n = maxOf(Integer.highestOneBit((rate * 0.012f).toInt()), Integer.highestOneBit(2 * hop - 1) shl 1, 64)
+        val window = FloatArray(n) { 0.5f - 0.5f * cos(2f * PI.toFloat() * it / n) }
+        val wet = FloatArray(x.size)
+        val re = FloatArray(n)
+        val im = FloatArray(n)
+        var start = -n / 2
+        while (start < x.size) {
+            for (i in 0 until n) {
+                val j = start + i
+                re[i] = if (j in x.indices) x[j] * window[i] else 0f
+                im[i] = 0f
+            }
+            fft(re, im)
+            for (k in 0 until n) {
+                re[k] = hypot(re[k], im[k])
+                im[k] = 0f
+            }
+            // The transform of a real, symmetric spectrum is a zero-phase pulse at index 0.
+            fft(re, im)
+            for (i in 0 until n) {
+                val j = start + i
+                if (j in x.indices) wet[j] += re[(i + n / 2) % n] * window[i]
+            }
+            start += hop
+        }
+        val wetLevel = rms(wet)
+        val gain = if (wetLevel > 0f) rms(x) / wetLevel else 0f
+        return FloatArray(x.size) { (1f - mix) * x[it] + mix * gain * wet[it] }
+    }
+
+    /** In-place radix-2 FFT; the size must be a power of two. */
+    private fun fft(re: FloatArray, im: FloatArray) {
+        val n = re.size
+        var j = 0
+        for (i in 1 until n) {
+            var bit = n shr 1
+            while (j and bit != 0) {
+                j = j xor bit
+                bit = bit shr 1
+            }
+            j = j xor bit
+            if (i < j) {
+                re[i] = re[j].also { re[j] = re[i] }
+                im[i] = im[j].also { im[j] = im[i] }
+            }
+        }
+        var length = 2
+        while (length <= n) {
+            val angle = -2.0 * PI / length
+            for (start in 0 until n step length) {
+                for (k in 0 until length / 2) {
+                    val c = cos(angle * k).toFloat()
+                    val s = sin(angle * k).toFloat()
+                    val a = start + k
+                    val b = a + length / 2
+                    val tr = re[b] * c - im[b] * s
+                    val ti = re[b] * s + im[b] * c
+                    re[b] = re[a] - tr
+                    im[b] = im[a] - ti
+                    re[a] += tr
+                    im[a] += ti
+                }
+            }
+            length = length shl 1
+        }
+    }
+
+    private fun rms(x: FloatArray): Float {
+        var sum = 0.0
+        for (v in x) sum += v * v
+        return if (x.isEmpty()) 0f else sqrt(sum / x.size).toFloat()
     }
 
     /** One-pole high-pass: thins the voice like a small speaker. */
@@ -123,4 +212,5 @@ object RobotVoice {
     private data class Tone(val from: Float, val to: Float, val seconds: Float)
 
     private const val TARGET_PEAK = 0.85f
+    private const val DEFAULT_ROBOT_HZ = 200f
 }

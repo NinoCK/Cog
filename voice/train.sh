@@ -5,7 +5,10 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 WORK="$(cd work && pwd -W 2>/dev/null || pwd)"
-EPOCHS="${1:-150}"
+EPOCHS="${1:-60}"
+# Defaults that fit an 8 GB GPU without spilling into (much slower) shared system memory.
+BATCH="${BATCH:-8}"
+PRECISION="${PRECISION:-bf16-mixed}"
 RUN=(docker run --rm --gpus all --shm-size 4g -v "$WORK:/data" cog-piper)
 export MSYS_NO_PATHCONV=1
 
@@ -31,11 +34,12 @@ done < work/segs/transcripts.tsv
     --data.espeak_voice en-gb-x-rp \
     --data.cache_dir /data/cache \
     --data.config_path /data/cog-config.json \
-    --data.batch_size 16 \
+    --data.batch_size "$BATCH" \
     --data.num_workers 4 \
     --model.sample_rate 22050 \
     --model.warmstart_ckpt /data/base/alan-medium.ckpt \
     --model.mos_metric null \
     --trainer.max_epochs "$EPOCHS" \
+    --trainer.precision "$PRECISION" \
     --trainer.check_val_every_n_epoch 10 \
     --trainer.default_root_dir /data/run

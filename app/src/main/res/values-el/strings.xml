@@ -318,11 +318,11 @@
     <string name="section_voice">Φωνή</string>
     <string name="pref_voice_style_title">Φωνή</string>
     <string name="voice_cog">Cog</string>
-    <string name="voice_cog_body">Η φωνή του Cog, φτιαγμένη για την εφαρμογή, στο τηλέφωνο. Μόνο αγγλικά: στα ελληνικά μιλά το Ρομπότ Cog</string>
-    <string name="voice_robot_cog">Ρομπότ Cog</string>
-    <string name="voice_robot_cog_body">Ένα ευγενικό ρομποτάκι με μεταλλική χροιά</string>
+    <string name="voice_cog_body">Ένα ευγενικό ρομποτάκι με μεταλλική χροιά</string>
     <string name="voice_natural">Φυσική</string>
     <string name="voice_natural_body">Η φωνή του τηλεφώνου, χωρίς εφέ</string>
+    <string name="voice_android">Ανδροειδές</string>
+    <string name="voice_android_body">Η φυσική φωνή με μια ελαφριά ηλεκτρονική χροιά</string>
     <string name="voice_classic">Κλασικό ρομπότ</string>
     <string name="voice_classic_body">Μονότονο και βουητό, σαν ταινία του \'50</string>
     <string name="voice_tiny">Μικρό ρομπότ</string>

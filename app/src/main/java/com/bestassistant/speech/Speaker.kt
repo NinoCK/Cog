@@ -47,8 +47,7 @@ data class VoiceOption(
 }
 
 /**
- * Reads replies aloud: in Cog's own voice ([CogVoice], English), otherwise with the phone's
- * own text-to-speech engine.
+ * Reads replies aloud with the phone's own text-to-speech engine.
  *
  * Lives as long as the process, so a reply keeps playing after the overlay closes. Picks a voice
  * that's installed on the device (never one that streams from a server), and briefly ducks
@@ -57,8 +56,8 @@ data class VoiceOption(
  * Engines don't say which voices are male or female, so each voice's pitch is measured once
  * (and remembered). A male or female voice is used when the phone has one; otherwise the voice
  * is resampled to move its formants and pitch, with the engine speaking faster or slower to keep
- * the tempo. Cog, robot styles and gender changes synthesise each sentence (robot styles via a
- * file, then processed) and stream it to an AudioTrack while the next sentence is being prepared.
+ * the tempo. Robot styles and gender changes synthesise each sentence to a file, process it,
+ * and stream it to an AudioTrack while the next sentence is being prepared.
  */
 class Speaker(private val context: Context, private val preferences: AppPreferences) {
 
@@ -66,7 +65,6 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val pitches = context.getSharedPreferences("voice_pitch", Context.MODE_PRIVATE)
     private var tts: TextToSpeech? = null
-    private val cog = CogVoice(context)
 
     @Volatile
     private var ready = false
@@ -120,7 +118,6 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
      */
     fun warmUp() {
         if (tts == null) start()
-        if (preferences.settings.value.voiceStyle.usesModel && cogSpeaksLanguage()) scope.launch { cog.warmUp() }
     }
 
     fun stop() {
@@ -191,13 +188,6 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
 
     /** Speaks [text]; true when the engine plays it directly (and will release the audio focus). */
     private suspend fun say(engine: TextToSpeech, text: String, style: VoiceStyle, male: Boolean, chosen: String?): Boolean {
-        if (style.usesModel) {
-            if (cogSpeaksLanguage() && cog.warmUp()) {
-                stream(text) { cog.synthesize(it) }
-                return false
-            }
-            return say(engine, text, style.fallback, male, chosen)
-        }
         val voice = pickVoice(engine, style, male, chosen)
         val shift = Pitch.shiftFor(voice?.let { pitchOf(engine, it) }, male)
         val pitch = style.pitch * shift.pitch
@@ -230,9 +220,6 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         return ranked.firstOrNull { voice -> knownPitch(voice.name)?.let { (it < Pitch.MALE_BELOW) == male } == true }
             ?: ranked.firstOrNull()
     }
-
-    /** The Cog model speaks English only. */
-    private fun cogSpeaksLanguage() = AppLanguage.locale.language == "en"
 
     private fun knownPitch(name: String): Float? = pitches.getFloat(name, -1f).takeIf { it > 0f }
 
@@ -273,21 +260,15 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         rate: Float,
         stretch: Float,
         effect: RobotEffect?,
-    ) = stream(text) { sentence ->
-        synthesize(engine, sentence, voice, pitch, rate)?.let { pcm ->
-            var samples = Pitch.resample(pcm.samples, stretch)
-            if (effect != null) samples = RobotVoice.process(samples, pcm.rate, effect)
-            Pcm(samples, pcm.rate)
-        }
-    }
-
-    /** Plays [text] sentence by sentence, preparing the next one while the current one plays. */
-    private suspend fun stream(text: String, render: suspend (String) -> Pcm?) = coroutineScope {
+    ) = coroutineScope {
         val chunks = Channel<Pcm>(capacity = 2)
         launch {
             try {
                 for (sentence in sentences(text)) {
-                    chunks.send(render(sentence) ?: continue)
+                    val pcm = synthesize(engine, sentence, voice, pitch, rate) ?: continue
+                    var samples = Pitch.resample(pcm.samples, stretch)
+                    if (effect != null) samples = RobotVoice.process(samples, pcm.rate, effect)
+                    chunks.send(Pcm(samples, pcm.rate))
                 }
             } finally {
                 chunks.close()
@@ -387,7 +368,7 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
                 // Measure the voice ahead of the first reply, so that reply isn't delayed by it.
                 val settings = preferences.settings.value
                 scope.launch {
-                    pickVoice(engine, settings.voiceStyle.fallback, settings.voiceGender == VoiceGender.MALE, settings.systemVoice)
+                    pickVoice(engine, settings.voiceStyle, settings.voiceGender == VoiceGender.MALE, settings.systemVoice)
                         ?.let { pitchOf(engine, it) }
                 }
             }

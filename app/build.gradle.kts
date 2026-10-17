@@ -78,9 +78,6 @@ dependencies {
     implementation(libs.androidx.profileinstaller)
     implementation(libs.vosk.android)
     implementation(libs.jna) { artifact { type = "aar" } }
-    // sherpa-onnx (github.com/k2-fsa/sherpa-onnx, v1.13.8, Apache 2.0, ONNX Runtime linked in):
-    // runs the Cog voice model (Piper/VITS) on the phone, with espeak-ng for pronunciation.
-    implementation(files("libs/sherpa-onnx-static-link-onnxruntime-1.13.8.aar"))
     // Spotify's App Remote SDK (github.com/spotify/android-sdk, v0.8.0): starts playback in the
     // Spotify app when the user has added their own Client ID. Gson is its JSON mapper.
     implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
