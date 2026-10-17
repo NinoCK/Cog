@@ -42,10 +42,12 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.bestassistant.commands.Command
+import com.bestassistant.commands.MediaAction
 import com.bestassistant.device.Step
 import com.bestassistant.language.AppLanguage
 import com.bestassistant.listen.ListenState
 import com.bestassistant.listen.VoiceInput
+import com.bestassistant.media.MusicPause
 import com.bestassistant.wake.WakeControl
 import com.bestassistant.wake.WakePhrase
 import kotlinx.coroutines.launch
@@ -112,6 +114,9 @@ class AssistActivity : ComponentActivity(), SearchActions {
         )
     }
 
+    /** Music that was playing is paused while listening, and resumed once the request is handled. */
+    private val music by lazy { MusicPause(this, fastSearch.media) }
+
     private val micPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         awaitingResult = false
         if (granted) startListening() else toast(R.string.error_mic_permission)
@@ -176,7 +181,10 @@ class AssistActivity : ComponentActivity(), SearchActions {
             LaunchedEffect(Unit) {
                 // Typing while it listens means the user chose the keyboard: stop listening.
                 snapshotFlow { textState.text.toString() }.collect { text ->
-                    if (voice.isActive && text != voiceText) voice.cancel()
+                    if (voice.isActive && text != voiceText) {
+                        voice.cancel()
+                        music.resume()
+                    }
                 }
             }
 
@@ -226,6 +234,7 @@ class AssistActivity : ComponentActivity(), SearchActions {
 
     override fun onDestroy() {
         voice.cancel()
+        music.resume()
         if (!isChangingConfigurations) WakeControl.overlayOpen.value = false
         super.onDestroy()
     }
@@ -269,6 +278,7 @@ class AssistActivity : ComponentActivity(), SearchActions {
 
     private fun finishSilently() {
         voice.cancel()
+        music.resume()
         WakeControl.overlayOpen.value = false
         finish()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -397,6 +407,7 @@ class AssistActivity : ComponentActivity(), SearchActions {
         val pending = pendingSpoken ?: return
         if (SystemClock.uptimeMillis() - pendingSpokenAt > SPOKEN_TIMEOUT_MS) {
             pendingSpoken = null
+            music.resume()
             return
         }
         if (state.query != pending) return
@@ -428,10 +439,14 @@ class AssistActivity : ComponentActivity(), SearchActions {
                 if (state.command == null) say(fastSearch.responder.forNothing(state.query))
             }
         }
+        // Handled without running a command (a command already decided about the music itself).
+        if (pendingSpoken == null) music.resume()
     }
 
     override fun runCommand(command: Command, contact: Contact?, bounds: ComposeRect?) {
         voice.cancel()
+        // "pause" and "play ..." decide what plays; anything else gets the music back first.
+        if (command is Command.PlayMusic || command == Command.Media(MediaAction.PAUSE)) music.forget() else music.resume()
         if (command.usesMediaSession && !fastSearch.media.hasAccess()) {
             // One-time setup: Android's notification-access screen is what grants media control.
             say(getString(R.string.error_media_access))
@@ -611,6 +626,7 @@ class AssistActivity : ComponentActivity(), SearchActions {
             return
         }
         fastSearch.speaker.stop()
+        music.pause()
         voiceText = textState.text.toString()
         voice.start(AppLanguage.locale)
     }
@@ -624,7 +640,10 @@ class AssistActivity : ComponentActivity(), SearchActions {
 
     private fun onSpoken(spoken: String) {
         val text = withoutWakePhrase(spoken).trim()
-        if (text.isEmpty()) return
+        if (text.isEmpty()) {
+            music.resume()
+            return
+        }
         voiceText = text
         textState.setTextAndPlaceCursorAtEnd(text)
         pendingSpoken = text
@@ -637,6 +656,7 @@ class AssistActivity : ComponentActivity(), SearchActions {
     }
 
     private fun onNothingHeard(code: Int) {
+        music.resume()
         when (code) {
             SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> toast(R.string.error_mic_permission)
             SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT, SpeechRecognizer.ERROR_SERVER ->
