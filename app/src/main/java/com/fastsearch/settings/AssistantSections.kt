@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Hearing
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Wc
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -56,7 +58,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestassistant.language.AssistantLanguage
+import com.bestassistant.speech.Speaker
+import com.bestassistant.speech.SupertonicVoice
 import com.bestassistant.speech.VoiceGender
 import com.bestassistant.speech.VoiceOption
 import com.bestassistant.speech.VoiceStyle
@@ -129,7 +134,8 @@ internal fun VoiceSection(settings: AppSettings, update: ((AppSettings) -> AppSe
         }
     }
 
-    VoiceStyle.entries.forEach { style ->
+    SupertonicRow(settings, update, speak)
+    VoiceStyle.entries.filter { it != VoiceStyle.SUPERTONIC }.forEach { style ->
         ListItem(
             modifier = Modifier.selectable(selected = settings.voiceStyle == style, role = Role.RadioButton) {
                 update { it.copy(voiceStyle = style) }
@@ -164,6 +170,88 @@ internal fun VoiceSection(settings: AppSettings, update: ((AppSettings) -> AppSe
                 speak()
             },
             onDismiss = { voiceDialog = false },
+        )
+    }
+}
+
+/**
+ * The Supertonic voice: downloaded once on request, then picked like any other style. It's
+ * selected as soon as the download finishes; deleting it while selected goes back to Cog.
+ */
+@Composable
+private fun SupertonicRow(settings: AppSettings, update: ((AppSettings) -> AppSettings) -> Unit, speak: () -> Unit) {
+    val context = LocalContext.current
+    val voice = context.fastSearch.supertonic
+    val state by voice.state.collectAsStateWithLifecycle()
+    var wasDownloading by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    LaunchedEffect(state) {
+        if (state is SupertonicVoice.State.Downloading) wasDownloading = true
+        if (state == SupertonicVoice.State.Ready && wasDownloading) {
+            wasDownloading = false
+            update { it.copy(voiceStyle = VoiceStyle.SUPERTONIC) }
+            speak()
+        }
+    }
+    val ready = state == SupertonicVoice.State.Ready
+    val selected = ready && settings.voiceStyle == VoiceStyle.SUPERTONIC
+    ListItem(
+        modifier = Modifier.selectable(selected = selected, enabled = ready, role = Role.RadioButton) {
+            update { it.copy(voiceStyle = VoiceStyle.SUPERTONIC) }
+            speak()
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        leadingContent = { RadioButton(selected = selected, onClick = null, enabled = ready) },
+        headlineContent = { Text(stringResource(VoiceStyle.SUPERTONIC.label)) },
+        supportingContent = {
+            Column {
+                Text(
+                    when (val current = state) {
+                        SupertonicVoice.State.Missing -> stringResource(R.string.voice_supertonic_missing)
+                        is SupertonicVoice.State.Downloading ->
+                            stringResource(R.string.voice_supertonic_downloading, (current.progress * 100).toInt())
+                        SupertonicVoice.State.Ready -> stringResource(VoiceStyle.SUPERTONIC.description)
+                        SupertonicVoice.State.Failed -> stringResource(R.string.voice_supertonic_failed)
+                    },
+                )
+                (state as? SupertonicVoice.State.Downloading)?.let { downloading ->
+                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(progress = { downloading.progress }, modifier = Modifier.fillMaxWidth())
+                }
+            }
+        },
+        trailingContent = when (state) {
+            SupertonicVoice.State.Missing -> {
+                { FilledTonalButton(onClick = voice::download) { Text(stringResource(R.string.action_download)) } }
+            }
+            SupertonicVoice.State.Failed -> {
+                { FilledTonalButton(onClick = voice::download) { Text(stringResource(R.string.action_retry)) } }
+            }
+            SupertonicVoice.State.Ready -> {
+                {
+                    IconButton(onClick = { confirmDelete = true }) {
+                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.voice_supertonic_delete))
+                    }
+                }
+            }
+            is SupertonicVoice.State.Downloading -> null
+        },
+    )
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            icon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
+            title = { Text(stringResource(R.string.voice_supertonic_delete)) },
+            text = { Text(stringResource(R.string.voice_supertonic_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    if (settings.voiceStyle == VoiceStyle.SUPERTONIC) update { it.copy(voiceStyle = Speaker.FALLBACK) }
+                    voice.delete()
+                }) { Text(stringResource(R.string.action_delete)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }

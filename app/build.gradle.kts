@@ -68,6 +68,14 @@ android {
         compose = true
         buildConfig = true
     }
+
+    packaging {
+        jniLibs {
+            // Compress native libraries in the APK (Android unpacks them at install): sherpa-onnx's
+            // static ONNX Runtime is about 24 MB per ABI uncompressed, about 9 MB compressed.
+            useLegacyPackaging = true
+        }
+    }
 }
 
 dependencies {
@@ -78,6 +86,9 @@ dependencies {
     implementation(libs.androidx.profileinstaller)
     implementation(libs.vosk.android)
     implementation(libs.jna) { artifact { type = "aar" } }
+    // sherpa-onnx (github.com/k2-fsa/sherpa-onnx, v1.13.8, Apache 2.0, ONNX Runtime linked in):
+    // runs the optional Supertonic 3 voice on the phone. The model itself is downloaded on request.
+    implementation(files("libs/sherpa-onnx-static-link-onnxruntime-1.13.8.aar"))
     // Spotify's App Remote SDK (github.com/spotify/android-sdk, v0.8.0): starts playback in the
     // Spotify app when the user has added their own Client ID. Gson is its JSON mapper.
     implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))

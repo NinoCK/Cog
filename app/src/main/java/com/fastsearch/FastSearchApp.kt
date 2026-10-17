@@ -11,6 +11,7 @@ import com.bestassistant.media.SpotifyCatalog
 import com.bestassistant.media.SpotifyRemote
 import com.bestassistant.speech.Responder
 import com.bestassistant.speech.Speaker
+import com.bestassistant.speech.SupertonicVoice
 import com.bestassistant.wake.WakeModel
 import com.bestassistant.wiki.WikipediaClient
 import com.bestassistant.weather.DeviceLocation
@@ -56,6 +57,8 @@ class FastSearchApp : Application() {
         private set
     lateinit var wakeModel: WakeModel
         private set
+    lateinit var supertonic: SupertonicVoice
+        private set
 
     /** This app's resources in the assistant's language, for replies spoken after the overlay closes. */
     lateinit var localized: Context
@@ -72,7 +75,8 @@ class FastSearchApp : Application() {
         playlists = SavedPlaylists(this)
         spotify = SpotifyRemote(this) { preferences.settings.value.spotifyClientId }
         commands = CommandRunner(this, { localized }, media, SpotifyCatalog(this), playlists, spotify)
-        speaker = Speaker(this, preferences)
+        supertonic = SupertonicVoice(this, appScope)
+        speaker = Speaker(this, preferences, supertonic)
         responder = Responder({ localized }, media)
         wakeModel = WakeModel(this, appScope)
         apps = AppRepository(this, appScope)

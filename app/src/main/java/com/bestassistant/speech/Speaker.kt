@@ -58,8 +58,16 @@ data class VoiceOption(
  * is resampled to move its formants and pitch, with the engine speaking faster or slower to keep
  * the tempo. Robot styles and gender changes synthesise each sentence to a file, process it,
  * and stream it to an AudioTrack while the next sentence is being prepared.
+ *
+ * The [VoiceStyle.SUPERTONIC] style uses the downloaded [SupertonicVoice] instead, the same way
+ * sentence by sentence; until it's downloaded, or if it can't be loaded, the phone's voice speaks
+ * in the [FALLBACK] style.
  */
-class Speaker(private val context: Context, private val preferences: AppPreferences) {
+class Speaker(
+    private val context: Context,
+    private val preferences: AppPreferences,
+    private val supertonic: SupertonicVoice,
+) {
 
     private val audio = context.getSystemService(AudioManager::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -92,18 +100,36 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
     /** Says [text], interrupting whatever was being said. */
     fun speak(text: String) {
         if (text.isBlank()) return
+        val settings = preferences.settings.value
+        val male = settings.voiceGender == VoiceGender.MALE
+        if (usesSupertonic()) {
+            pending = null
+            stopPlayback()
+            audio.requestAudioFocus(focus)
+            job = scope.launch {
+                var spoken = false
+                try {
+                    spoken = speakSupertonic(text, male)
+                } finally {
+                    audio.abandonAudioFocusRequest(focus)
+                }
+                // The model couldn't be loaded: say it with the phone's voice instead.
+                if (!spoken && !usesSupertonic()) scope.launch(Dispatchers.Main) { speak(text) }
+            }
+            return
+        }
         val engine = tts ?: start()
         if (!ready) {
             pending = text // spoken as soon as the engine is up
             return
         }
         stopPlayback()
-        val settings = preferences.settings.value
+        val style = settings.voiceStyle.takeUnless { it == VoiceStyle.SUPERTONIC } ?: FALLBACK
         audio.requestAudioFocus(focus)
         job = scope.launch {
             var handedOff = false
             try {
-                handedOff = say(engine, text, settings.voiceStyle, settings.voiceGender == VoiceGender.MALE, settings.systemVoice)
+                handedOff = say(engine, text, style, male, settings.systemVoice)
             } finally {
                 // The engine's own playback gives the focus back when it finishes (onDone).
                 if (!handedOff) audio.abandonAudioFocusRequest(focus)
@@ -112,13 +138,21 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
     }
 
     /**
-     * Connects to the speech engine ahead of time. Binding takes a moment on a cold start; doing
-     * it when the overlay opens means a reply can start the instant a command runs, even though
-     * the overlay closes right after (and Android soon freezes a backgrounded app).
+     * Gets the voice ready ahead of time. Binding to the phone's engine, or loading the Supertonic
+     * model, takes a moment on a cold start; doing it when the overlay opens means a reply can
+     * start the instant a command runs, even though the overlay closes right after (and Android
+     * soon freezes a backgrounded app).
      */
     fun warmUp() {
-        if (tts == null) start()
+        if (usesSupertonic()) {
+            scope.launch { supertonic.warmUp() }
+        } else if (tts == null) {
+            start()
+        }
     }
+
+    private fun usesSupertonic() =
+        preferences.settings.value.voiceStyle == VoiceStyle.SUPERTONIC && supertonic.isUsable()
 
     fun stop() {
         pending = null
@@ -277,6 +311,28 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         launch(Dispatchers.IO) { play(chunks) }
     }
 
+    /** Speaks [text] with the Supertonic voice; false when not a sentence could be made. */
+    private suspend fun speakSupertonic(text: String, male: Boolean): Boolean {
+        val language = AppLanguage.locale.language
+        var spoken = false
+        coroutineScope {
+            val chunks = Channel<Pcm>(capacity = 2)
+            launch {
+                try {
+                    for (sentence in sentences(text)) {
+                        val pcm = supertonic.synthesize(sentence, language, male) ?: continue
+                        spoken = true
+                        chunks.send(pcm)
+                    }
+                } finally {
+                    chunks.close()
+                }
+            }
+            launch(Dispatchers.IO) { play(chunks) }
+        }
+        return spoken
+    }
+
     private suspend fun synthesize(engine: TextToSpeech, text: String, voice: Voice?, pitch: Float, rate: Float): Pcm? {
         val id = "chunk-${counter.getAndIncrement()}"
         val file = File(context.cacheDir, "tts-$id.wav")
@@ -405,6 +461,9 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         private const val TAG = "Speaker"
         private const val SYNTHESIS_TIMEOUT_MS = 8_000L
         private const val CHIRP_RATE = 24_000
+
+        /** The phone-voice style used while the Supertonic voice isn't available. */
+        val FALLBACK = VoiceStyle.COG
 
         /**
          * Splits a reply into sentences, so the first one can play while the next is prepared.

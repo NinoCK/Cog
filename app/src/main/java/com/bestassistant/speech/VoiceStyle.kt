@@ -5,7 +5,8 @@ import com.fastsearch.R
 
 /**
  * How the assistant sounds: the phone's own text-to-speech voice, at a given pitch and speed,
- * optionally run through [RobotVoice] effects. Everything is computed on the device.
+ * optionally run through [RobotVoice] effects, or the downloadable [SupertonicVoice].
+ * Everything is computed on the device.
  */
 enum class VoiceStyle(
     @param:StringRes val label: Int,
@@ -16,6 +17,9 @@ enum class VoiceStyle(
     /** For English, prefer a British voice when the user hasn't picked one. */
     val prefersBritish: Boolean = false,
 ) {
+    /** The natural Supertonic voice, once downloaded (pitch, rate and effect don't apply). */
+    SUPERTONIC(R.string.voice_supertonic, R.string.voice_supertonic_body, pitch = 1f, rate = 1f, effect = null),
+
     /** A polite little robot: brighter pitch, a metallic shimmer and a light electronic doubling. */
     COG(
         R.string.voice_cog, R.string.voice_cog_body, pitch = 1.14f, rate = 0.97f,

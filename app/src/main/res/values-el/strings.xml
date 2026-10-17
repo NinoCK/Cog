@@ -259,6 +259,7 @@
     <string name="action_retry">Ξανά</string>
     <string name="action_save">Αποθήκευση</string>
     <string name="action_cancel">Ακύρωση</string>
+    <string name="action_delete">Διαγραφή</string>
     <string name="done">Έτοιμο</string>
     <string name="close">Κλείσιμο</string>
 
@@ -310,7 +311,7 @@
     <string name="pref_wikipedia_title">Απαντήσεις από τη Βικιπαίδεια</string>
     <string name="pref_wikipedia_body">Απαντά σε «τι είναι…» και «ποιος είναι…» από τη Βικιπαίδεια</string>
     <string name="pref_speech_title">Φωνητικές απαντήσεις</string>
-    <string name="pref_speech_body">Διαβάζει τις απαντήσεις με τη φωνή του τηλεφώνου, εκτός σύνδεσης</string>
+    <string name="pref_speech_body">Διαβάζει τις απαντήσεις με φωνή εκτός σύνδεσης</string>
     <string name="speech_always">Πάντα</string>
     <string name="speech_voice_only">Μετά από φωνή</string>
     <string name="speech_off">Ποτέ</string>
@@ -329,6 +330,13 @@
     <string name="voice_tiny_body">Μικροκαμωμένο, γρήγορο και τσιριχτό</string>
     <string name="voice_big">Μεγάλο ρομπότ</string>
     <string name="voice_big_body">Βαθύ, αργό και βαρύ</string>
+    <string name="voice_supertonic">Supertonic</string>
+    <string name="voice_supertonic_body">Φυσική φωνή για Αγγλικά και Ελληνικά, που φτιάχνεται στο τηλέφωνο</string>
+    <string name="voice_supertonic_missing">Φυσική φωνή για Αγγλικά και Ελληνικά. Κατέβασέ την μία φορά (145 MB)· μέχρι τότε μιλάει η φωνή του τηλεφώνου.</string>
+    <string name="voice_supertonic_downloading">Λήψη… %1$d%%</string>
+    <string name="voice_supertonic_failed">Η λήψη απέτυχε. Έλεγξε τη σύνδεση και δοκίμασε ξανά.</string>
+    <string name="voice_supertonic_delete">Διαγραφή της φωνής Supertonic</string>
+    <string name="voice_supertonic_delete_body">Οι απαντήσεις θα ακούγονται ξανά με τη φωνή του τηλεφώνου. Για να την ξαναβάλεις, θα χρειαστεί λήψη 145 MB.</string>
     <string name="pref_voice_gender_title">Τύπος φωνής</string>
     <string name="pref_voice_gender_body">Τα τηλέφωνα συχνά έχουν μόνο γυναικείες φωνές για μια γλώσσα· τότε η ανδρική φωνή δημιουργείται από αυτές, στο τηλέφωνο</string>
     <string name="gender_male">Ανδρική</string>
@@ -391,7 +399,7 @@
 
     <string name="section_privacy">Απόρρητο</string>
     <string name="privacy_title">Τα αιτήματά σου μένουν στη συσκευή</string>
-    <string name="privacy_body">Οι εντολές γίνονται κατανοητές στο ίδιο το τηλέφωνο, χωρίς υπηρεσία τεχνητής νοημοσύνης και χωρίς cloud. Ξυπνητήρια, χρονόμετρα, ο φακός, η ένταση, τα πολυμέσα, οι μετατροπές, το παγκόσμιο ρολόι, οι εφαρμογές, οι επαφές και οι υπολογισμοί δεν φεύγουν ποτέ από το τηλέφωνο. Τη λέξη αφύπνισης την ακούει ένας ακροατής εκτός σύνδεσης στο τηλέφωνο. Οι προτάσεις και οι άμεσες απαντήσεις στέλνουν ό,τι γράφεις στο DuckDuckGo. Ο καιρός στέλνει ένα όνομα πόλης ή την τοποθεσία σου στρογγυλεμένη στο 1 χλμ. περίπου στο Open-Meteo. Οι ερωτήσεις «τι είναι…» στέλνονται στη Βικιπαίδεια. Το όνομα καλλιτέχνη, τραγουδιού ή άλμπουμ που ζητάς στο Spotify αναζητείται μία φορά στο Wikidata. Το προαιρετικό «πάτημα αναπαραγωγής στο Spotify» κοιτά μόνο το Spotify, για λίγα δευτερόλεπτα μετά το αίτημά σου. Οι απαντήσεις εκφωνούνται από τη φωνή του τηλεφώνου, εκτός σύνδεσης.</string>
+    <string name="privacy_body">Οι εντολές γίνονται κατανοητές στο ίδιο το τηλέφωνο, χωρίς υπηρεσία τεχνητής νοημοσύνης και χωρίς cloud. Ξυπνητήρια, χρονόμετρα, ο φακός, η ένταση, τα πολυμέσα, οι μετατροπές, το παγκόσμιο ρολόι, οι εφαρμογές, οι επαφές και οι υπολογισμοί δεν φεύγουν ποτέ από το τηλέφωνο. Τη λέξη αφύπνισης την ακούει ένας ακροατής εκτός σύνδεσης στο τηλέφωνο. Οι προτάσεις και οι άμεσες απαντήσεις στέλνουν ό,τι γράφεις στο DuckDuckGo. Ο καιρός στέλνει ένα όνομα πόλης ή την τοποθεσία σου στρογγυλεμένη στο 1 χλμ. περίπου στο Open-Meteo. Οι ερωτήσεις «τι είναι…» στέλνονται στη Βικιπαίδεια. Το όνομα καλλιτέχνη, τραγουδιού ή άλμπουμ που ζητάς στο Spotify αναζητείται μία φορά στο Wikidata. Το προαιρετικό «πάτημα αναπαραγωγής στο Spotify» κοιτά μόνο το Spotify, για λίγα δευτερόλεπτα μετά το αίτημά σου. Οι απαντήσεις εκφωνούνται στο τηλέφωνο, από τη δική του φωνή εκτός σύνδεσης ή από την προαιρετική φωνή Supertonic, που κατεβαίνει μία φορά από το Hugging Face.</string>
     <string name="version">Έκδοση %1$s</string>
 
     <!-- Saved Spotify playlists -->
