@@ -62,14 +62,6 @@ formants and pitch, with the engine speaking faster to keep the tempo. *Base voi
 phone's voices labelled male/female. *Spoken replies* chooses when it talks: always, after voice
 only, or never.
 
-**Supertonic voice (optional).** A natural voice that speaks English and Greek with the same
-character: [Supertonic 3](https://huggingface.co/Supertone/supertonic-3) (Supertone, OpenRAIL),
-run on the phone by [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx). Its int8 model (145 MB)
-isn't in the APK: *Settings › Voice › Supertonic › Download* fetches it once from sherpa-onnx's
-Hugging Face copy, pinned to one commit, and checks every file's SHA-256. It's then selected
-automatically; Male is preset voice M2, Female is F2. Until it's downloaded, or if it can't be
-loaded, replies use the phone's voice in the Cog style.
-
 ## Spotify
 
 "Play X on Spotify" always opens Spotify and starts the music:
@@ -136,11 +128,11 @@ adb shell cmd role add-role-holder android.app.role.ASSISTANT com.bestassistant.
 
 `./gradlew testDebugUnitTest` runs the unit tests: the English and Greek command parsers
 (hundreds of phrases, including ones that must stay ordinary searches), the wake-phrase matcher,
-the pitch detector and voice reshaping, the robot-voice DSP and WAV reader, the Supertonic
-voice's pinned files, Wikipedia parsing, the calculator and the fuzzy matcher.
+the pitch detector and voice reshaping, the robot-voice DSP and WAV reader, Wikipedia parsing,
+the calculator and the fuzzy matcher.
 
-The release APK is about 41 MB, most of it native speech libraries (the wake word and the
-Supertonic voice's ONNX Runtime) for three CPU types (arm64, armv7, x86_64), stored compressed.
+The release APK is about 100 MB, almost all of it native speech libraries (the wake word and the
+on-device voice) for three CPU types (arm64, armv7, x86_64).
 
 ## How it works
 
@@ -170,7 +162,6 @@ app/src/main/java/
 │   ├── speech/
 │   │   ├── Responder.kt            the reply template for every scenario
 │   │   ├── Speaker.kt              text-to-speech, voice choice, streaming playback
-│   │   ├── SupertonicVoice.kt      downloads, verifies and runs the Supertonic voice
 │   │   ├── VoiceStyle.kt           voice styles and male/female
 │   │   ├── RobotVoice.kt           robot effects and the wake chirp
 │   │   ├── Pitch.kt                pitch measurement and male/female resampling
@@ -198,8 +189,7 @@ app/src/main/java/
   button, and stores or sends nothing.
 - Web suggestions and instant answers send what you type to DuckDuckGo, as in FastSearch.
 - Voice requests use the system recognizer, preferring offline recognition. Replies use an
-  on-device text-to-speech voice. The optional Supertonic voice is downloaded once from
-  huggingface.co; after that it runs on the phone.
+  on-device text-to-speech voice.
 - Permissions are requested only when a feature needs them: contacts, coarse location,
   microphone, notifications (the wake word's status), display over other apps (the wake word),
   notification access (media control). Calls open the dialer pre-filled, so there's no
