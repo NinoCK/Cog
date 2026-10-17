@@ -1,0 +1,46 @@
+# Android / Gradle
+*.iml
+.gradle/
+.kotlin/
+/local.properties
+/.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+/build/
+/app/build/
+/app/release/
+/app/debug/
+/captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.hprof
+*.log
+
+# Signing keys and secrets: never commit
+*.keystore
+*.jks
+/keystore/
+keystore.properties
+*.env
+.env*
+google-services.json
+
+# Voice: reference audio, generated training data and the trained model stay local
+/voice/work/
+/voice/.venv*/
+__pycache__/
+*.wav
+*.m4a
+*.mp3
+*.onnx
+*.ckpt
+
+# Assistant tooling, local only
+.claude/
+CLAUDE.md
+
+# Obsolete: screenshots from FastSearch, not used by the README
+/docs/screenshots/

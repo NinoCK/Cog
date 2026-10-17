@@ -1,0 +1,10 @@
+* text=auto
+# Shell scripts must keep LF to run on Linux/Docker
+*.sh text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+# App assets (espeak-ng pronunciation data, voice tokens) are read byte for byte
+app/src/main/assets/** -text
+*.aar binary
+*.jar binary
+*.png binary

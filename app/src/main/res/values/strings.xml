@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Cog</string>
+    <string name="assist_label" translatable="false">Cog</string>
+    <string name="tile_label" translatable="false">Cog</string>
+    <string name="shortcut_search_short">Search</string>
+    <string name="shortcut_search_long">Search apps, contacts and the web</string>
+
+    <!-- Search engines -->
+    <string name="engine_duckduckgo" translatable="false">DuckDuckGo</string>
+    <string name="engine_google" translatable="false">Google</string>
+    <string name="engine_brave" translatable="false">Brave Search</string>
+    <string name="engine_startpage" translatable="false">Startpage</string>
+    <string name="engine_bing" translatable="false">Bing</string>
+
+    <!-- Overlay -->
+    <string name="search_hint">Search, or ask anything</string>
+    <string name="listening_hint">Listening… speak, or start typing</string>
+    <string name="processing_hint">One moment…</string>
+    <string name="section_suggested">Suggested</string>
+    <string name="section_examples">Try asking</string>
+    <string name="section_apps">Apps</string>
+    <string name="section_contacts">Contacts</string>
+    <string name="section_web">Web</string>
+    <string name="open_link">Open link</string>
+    <string name="search_with">Search with %1$s</string>
+    <string name="answer_attribution">%1$s · via DuckDuckGo</string>
+    <string name="calc_degrees">%1$s  (degrees)</string>
+    <string name="contacts_prompt_title">Search your contacts</string>
+    <string name="contacts_prompt_body">Find people and call or text them from here</string>
+    <string name="clip_label">Cog result</string>
+    <string name="copied">Copied</string>
+    <string name="error_launch">Couldn\'t open that</string>
+    <string name="error_no_app">No app can open this</string>
+    <string name="error_no_recognizer">Speech recognition isn\'t available on this phone</string>
+    <string name="error_mic_permission">Allow the microphone to ask by voice</string>
+    <string name="error_voice_network">Speech recognition needs a connection, or the offline speech pack for this language</string>
+    <string name="error_voice_language">Speech recognition doesn\'t support this language yet. Install it in your phone\'s voice typing settings.</string>
+
+    <!-- Example chips (tapping one fills the search bar) -->
+    <string name="example_alarm">alarm 7am</string>
+    <string name="example_timer">timer 10 min</string>
+    <string name="example_weather">weather tomorrow</string>
+    <string name="example_torch">flashlight</string>
+    <string name="example_time">time in Tokyo</string>
+    <string name="example_convert">5 km to miles</string>
+    <string name="example_call">call mom</string>
+    <string name="example_media">next song</string>
+    <string name="example_music">play Iron Maiden on Spotify</string>
+    <string name="example_wiki">what is a quasar</string>
+
+    <!-- Commands: what a command row says it will do -->
+    <string name="cmd_play_music">Play %1$s</string>
+    <string name="cmd_music_app">Music app</string>
+    <string name="cmd_alarm">Set an alarm for %1$s</string>
+    <string name="cmd_alarm_in">Rings in %1$s</string>
+    <string name="cmd_show_alarms">Show alarms</string>
+    <string name="cmd_timer">Start a %1$s timer</string>
+    <string name="cmd_show_timers">Show timers</string>
+    <string name="cmd_clock_app">Clock</string>
+    <string name="cmd_torch_on">Turn the flashlight on</string>
+    <string name="cmd_torch_off">Turn the flashlight off</string>
+    <string name="cmd_device">This phone</string>
+    <string name="cmd_volume_up">Volume up</string>
+    <string name="cmd_volume_down">Volume down</string>
+    <string name="cmd_mute">Mute media</string>
+    <string name="cmd_unmute">Unmute media</string>
+    <string name="cmd_volume_set">Set media volume to %1$d%%</string>
+    <string name="cmd_media_volume">Media volume</string>
+    <string name="cmd_play">Play</string>
+    <string name="cmd_pause">Pause</string>
+    <string name="cmd_next">Next track</string>
+    <string name="cmd_previous">Previous track</string>
+    <string name="cmd_media">Whatever is playing</string>
+    <string name="cmd_now_playing">What\'s playing</string>
+    <string name="cmd_like">Like this song</string>
+    <string name="cmd_shuffle_on">Shuffle on</string>
+    <string name="cmd_shuffle_off">Shuffle off</string>
+    <string name="cmd_repeat_on">Repeat on</string>
+    <string name="cmd_repeat_off">Repeat off</string>
+    <string name="cmd_media_needs_access">Needs media control: tap to allow</string>
+    <string name="cmd_navigate">Directions to %1$s</string>
+    <string name="cmd_maps_app">Maps</string>
+    <string name="cmd_photo">Take a photo</string>
+    <string name="cmd_video">Record a video</string>
+    <string name="cmd_camera_app">Camera</string>
+    <string name="cmd_panel">%1$s settings</string>
+    <string name="cmd_panel_on">Turn on %1$s</string>
+    <string name="cmd_panel_off">Turn off %1$s</string>
+    <string name="cmd_panel_note">Opens the switch (Android doesn\'t let apps flip it directly)</string>
+    <string name="cmd_settings_app">Settings</string>
+    <string name="cmd_call">Call %1$s</string>
+    <string name="cmd_message">Message %1$s</string>
+    <string name="cmd_phone_app">Phone</string>
+
+    <string name="panel_wifi">Wi-Fi</string>
+    <string name="panel_bluetooth">Bluetooth</string>
+    <string name="panel_internet">Mobile data</string>
+    <string name="panel_airplane">Airplane mode</string>
+    <string name="panel_nfc">NFC</string>
+    <string name="panel_hotspot">Hotspot</string>
+    <string name="panel_volume">Sound</string>
+    <string name="panel_battery">Battery saver</string>
+    <string name="panel_display">Display</string>
+    <string name="panel_location">Location</string>
+    <string name="panel_dnd">Do Not Disturb</string>
+
+    <!-- Commands: confirmations -->
+    <string name="done_alarm">Alarm set for %1$s</string>
+    <string name="done_timer">Timer set for %1$s</string>
+    <string name="done_torch_on">Flashlight on</string>
+    <string name="done_torch_off">Flashlight off</string>
+    <string name="done_play">Playing</string>
+    <string name="done_pause">Paused</string>
+    <string name="done_next">Next track</string>
+    <string name="done_previous">Previous track</string>
+    <string name="done_liked">Added to your liked songs</string>
+    <string name="error_torch">The flashlight isn\'t available right now</string>
+    <string name="error_volume">Volume can\'t be changed while Do Not Disturb is on</string>
+    <string name="error_no_number">No phone number for this contact</string>
+    <string name="error_media_access">To control music, allow media control in Cog settings.</string>
+    <string name="error_no_player">Nothing is playing right now.</string>
+    <string name="error_like">This player doesn\'t let me like songs.</string>
+
+    <!-- Durations -->
+    <string name="duration_h">%1$d h</string>
+    <string name="duration_min">%1$d min</string>
+    <string name="duration_s">%1$d s</string>
+    <plurals name="spoken_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="spoken_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="spoken_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+
+    <!-- World clock -->
+    <string name="clock_here">Here</string>
+    <string name="clock_same_time">Same time as here</string>
+    <string name="clock_offset">%1$s from here</string>
+
+    <!-- Weather -->
+    <string name="weather_loading">Checking the weather near you…</string>
+    <string name="weather_loading_place">Checking the weather in %1$s…</string>
+    <string name="weather_location_title">Weather where you are</string>
+    <string name="weather_location_body">Allow approximate location, or type “weather in” and a city</string>
+    <string name="weather_not_found">Couldn\'t find a place called “%1$s”</string>
+    <string name="weather_unavailable">Weather isn\'t available right now</string>
+    <string name="weather_no_fix">Couldn\'t find your location. Turn location on, or type “weather in” and a city</string>
+    <string name="weather_here">Your location</string>
+    <string name="weather_now">Now</string>
+    <string name="weather_today">Today</string>
+    <string name="weather_tomorrow">Tomorrow</string>
+    <string name="weather_feels_like">Feels like %1$s</string>
+    <string name="weather_wind">Wind %1$d %2$s</string>
+    <string name="weather_humidity">Humidity %1$d%%</string>
+    <string name="weather_rain_chance">%1$d%% chance of rain</string>
+    <string name="weather_attribution">Weather data by Open-Meteo.com</string>
+    <string name="wmo_clear">Clear</string>
+    <string name="wmo_mostly_clear">Mostly clear</string>
+    <string name="wmo_partly_cloudy">Partly cloudy</string>
+    <string name="wmo_overcast">Overcast</string>
+    <string name="wmo_fog">Fog</string>
+    <string name="wmo_drizzle">Drizzle</string>
+    <string name="wmo_freezing_rain">Freezing rain</string>
+    <string name="wmo_rain">Rain</string>
+    <string name="wmo_heavy_rain">Heavy rain</string>
+    <string name="wmo_snow">Snow</string>
+    <string name="wmo_heavy_snow">Heavy snow</string>
+    <string name="wmo_thunderstorm">Thunderstorm</string>
+    <string name="wmo_unknown" translatable="false">—</string>
+
+    <!-- Wikipedia -->
+    <string name="wiki_loading">Looking up “%1$s” on Wikipedia…</string>
+    <string name="wiki_not_found">Wikipedia has no article about “%1$s”</string>
+    <string name="wiki_unavailable">Wikipedia can\'t be reached right now</string>
+    <string name="wiki_attribution">From Wikipedia · CC BY-SA · tap to open</string>
+
+    <!--
+        Spoken replies, in the assistant's character: a polite, precise little robot. Each
+        scenario has one fixed template, filled in with the facts: the same request always gets
+        the same kind of answer. Leading spaces are kept with quotes.
+    -->
+    <string name="say_alarm">Affirmative. Your alarm is set for %1$s, which is %2$s from now.</string>
+    <string name="say_alarm_label">Affirmative. Your %2$s alarm is set for %1$s, which is %3$s from now.</string>
+    <string name="say_show_alarms">Here are your alarms.</string>
+    <string name="say_timer">Timer engaged: %1$s, counting down now.</string>
+    <string name="say_timer_label">Your %2$s timer is set for %1$s. Counting down now.</string>
+    <string name="say_show_timers">Here are your timers.</string>
+    <string name="say_torch_on">Illumination activated.</string>
+    <string name="say_torch_off">Illumination deactivated.</string>
+    <string name="say_volume_up">Increasing the volume.</string>
+    <string name="say_volume_down">Lowering the volume.</string>
+    <string name="say_mute">Silence engaged.</string>
+    <string name="say_unmute">Sound restored.</string>
+    <string name="say_volume_set">Media volume set to %1$d percent.</string>
+    <string name="say_play">Resuming playback.</string>
+    <string name="say_pause">Playback paused.</string>
+    <string name="say_next">Skipping ahead.</string>
+    <string name="say_previous">Returning to the previous track.</string>
+    <string name="say_play_music_app">Splendid choice. Playing %1$s on %2$s.</string>
+    <string name="say_play_music">Splendid choice. Playing %1$s.</string>
+    <string name="say_now_playing">This is %1$s.</string>
+    <string name="say_now_playing_artist">This is %1$s, by %2$s.</string>
+    <string name="say_nothing_playing">Nothing is playing at the moment.</string>
+    <string name="say_liked">Added to your liked songs. An excellent choice.</string>
+    <string name="say_shuffle_on">Shuffle engaged.</string>
+    <string name="say_shuffle_off">Shuffle disengaged.</string>
+    <string name="say_repeat_on">Repeat engaged.</string>
+    <string name="say_repeat_off">Repeat disengaged.</string>
+    <string name="say_navigate">Plotting a course to %1$s.</string>
+    <string name="say_photo">Opening the camera. Do smile.</string>
+    <string name="say_video">Opening the camera to record.</string>
+    <string name="say_panel">Here are your %1$s settings.</string>
+    <string name="say_panel_on">Here is the %1$s switch. I am afraid Android insists you flip it yourself.</string>
+    <string name="say_panel_off">Here is the %1$s switch. I am afraid Android insists you flip it yourself.</string>
+    <string name="say_call">Calling %1$s.</string>
+    <string name="say_dial">Calling %1$s.</string>
+    <string name="say_message">Composing a message to %1$s.</string>
+    <string name="say_message_body">A message to %1$s that reads: %2$s. Simply tap send.</string>
+    <string name="say_open_app">Opening %1$s.</string>
+    <string name="say_calculation">By my calculations, that is %1$s.</string>
+    <string name="say_nothing">I am afraid that is beyond my programming. Here is what I found for %1$s.</string>
+    <string name="say_conversion">%1$s %2$s is %3$s %4$s.</string>
+    <string name="say_time_here">It is %1$s on %2$s.</string>
+    <string name="say_time_in">It is %2$s in %1$s.</string>
+    <string name="say_time_same">That is the same time as here.</string>
+    <string name="say_time_ahead">That is %1$s ahead of you.</string>
+    <string name="say_time_behind">That is %1$s behind you.</string>
+    <string name="say_in_place">" in %1$s"</string>
+    <string name="say_unit_c">degrees</string>
+    <string name="say_unit_f">degrees</string>
+    <string name="say_weather_now">Right now%1$s it is %2$d %3$s and %4$s.</string>
+    <string name="say_weather_feels">It feels like %1$d.</string>
+    <string name="say_weather_range">Today\'s high is %1$d and the low is %2$d.</string>
+    <string name="say_weather_rain">There is a %1$d percent chance of rain. I recommend an umbrella.</string>
+    <string name="say_weather_some_rain">There is a %1$d percent chance of rain.</string>
+    <string name="say_weather_no_rain">No rain is expected.</string>
+    <string name="say_weather_tomorrow">Tomorrow%1$s: %2$s, with a high of %3$d and a low of %4$d %5$s.</string>
+    <string name="say_weather_warmest">The warmest day this week is %1$s, at %2$d %3$s.</string>
+    <string name="say_weather_dry">It looks dry all week.</string>
+    <string name="say_weather_rainy_days">Rain is likely on %1$s.</string>
+    <string name="say_weather_not_found">I could not find a place called %1$s.</string>
+    <string name="say_weather_unavailable">I am unable to reach the weather service at the moment.</string>
+    <string name="say_weather_needs_location">To report the local weather I require your approximate location. Tap Allow, or ask about a city.</string>
+    <string name="say_and">and</string>
+    <string name="say_wikipedia">According to Wikipedia: %1$s</string>
+    <string name="say_wikipedia_missing">My search of Wikipedia found nothing about %1$s.</string>
+    <string name="say_wikipedia_unavailable">I am unable to reach Wikipedia at the moment.</string>
+    <string name="done_play_music_app">Playing %1$s on %2$s</string>
+    <string name="done_play_music">Playing %1$s</string>
+
+
+    <!-- Actions -->
+    <string name="action_app_info">App info</string>
+    <string name="action_uninstall">Uninstall</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_call">Call</string>
+    <string name="action_message">Message</string>
+    <string name="action_allow">Allow</string>
+    <string name="action_fill">Use this search</string>
+    <string name="action_voice">Ask by voice</string>
+    <string name="action_stop_listening">Stop listening</string>
+    <string name="action_settings">Cog settings</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_read_aloud">Read aloud</string>
+    <string name="action_set">Set</string>
+    <string name="action_preview">Preview</string>
+    <string name="action_download">Download</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="done">Done</string>
+    <string name="close">Close</string>
+
+    <!-- Settings -->
+    <string name="try_it">Try it</string>
+    <string name="hero_setup_title">Make Cog your assistant</string>
+    <string name="hero_setup_body">Choose Cog as the digital assistant app and it opens instantly from the assistant gesture, keyboard ready.</string>
+    <string name="hero_setup_action">Set as default assistant</string>
+    <string name="hero_ready_title">You\'re all set</string>
+    <string name="hero_ready_body">Cog is your digital assistant. Use the assistant gesture anywhere, then type or speak.</string>
+    <string name="step_assistant_title">Default digital assistant</string>
+    <string name="step_assistant_body">Settings › Apps › Default apps › Digital assistant app</string>
+    <string name="step_contacts_title">Contacts</string>
+    <string name="step_contacts_body">Find people, and “call mom” or “text Alex”</string>
+    <string name="step_location_title">Approximate location</string>
+    <string name="step_location_body">For “weather” without naming a city</string>
+    <string name="step_mic_title">Microphone</string>
+    <string name="step_mic_body">Listen for your requests, and for the wake word</string>
+    <string name="step_media_title">Media control</string>
+    <string name="step_media_body">Start songs in Spotify and other players directly, say what\'s playing, like songs and shuffle. Android calls this “notification access”; notifications are never read.</string>
+    <string name="step_gesture_title">How to open it</string>
+    <string name="step_gesture_body">Say the wake word, long-press the home button, swipe up from a bottom corner, or hold the power button (when it\'s set to the digital assistant). There\'s also a Quick Settings tile.</string>
+
+    <string name="section_search_settings">Search</string>
+    <string name="pref_web_title">Web suggestions</string>
+    <string name="pref_web_body">Autocomplete from DuckDuckGo as you type</string>
+    <string name="pref_answers_title">Instant answers</string>
+    <string name="pref_answers_body">Quick facts and definitions from DuckDuckGo</string>
+    <string name="pref_contacts_title">Search contacts</string>
+    <string name="pref_contacts_body">Show matching people in results</string>
+    <string name="pref_suggested_title">Suggested apps</string>
+    <string name="pref_suggested_body">Show your most-used apps before you type</string>
+    <string name="pref_engine_title">Web search engine</string>
+
+    <string name="section_assistant_settings">Assistant</string>
+    <string name="pref_language_title">Language</string>
+    <string name="pref_language_body">What it understands, says and shows</string>
+    <string name="language_system">Phone language</string>
+    <string name="language_en" translatable="false">English</string>
+    <string name="language_el" translatable="false">Ελληνικά</string>
+    <string name="pref_weather_title">Weather</string>
+    <string name="pref_weather_body">Forecasts from Open-Meteo: no account, no tracking</string>
+    <string name="pref_units_title">Units</string>
+    <string name="units_auto">Automatic</string>
+    <string name="units_metric">Metric</string>
+    <string name="units_imperial">Imperial</string>
+    <string name="pref_spoken_title">Run spoken commands</string>
+    <string name="pref_spoken_body">After voice input, set the alarm or start the timer straight away</string>
+    <string name="pref_listen_title">Listen when opened</string>
+    <string name="pref_listen_body">Start listening as soon as the assistant opens, keyboard ready too. Typing stops listening.</string>
+    <string name="pref_wikipedia_title">Wikipedia answers</string>
+    <string name="pref_wikipedia_body">Answer “what is…” and “who is…” from Wikipedia</string>
+    <string name="pref_speech_title">Spoken replies</string>
+    <string name="pref_speech_body">Read replies aloud with the phone\'s own offline voice</string>
+    <string name="speech_always">Always</string>
+    <string name="speech_voice_only">After voice</string>
+    <string name="speech_off">Off</string>
+
+    <string name="section_voice">Voice</string>
+    <string name="pref_voice_style_title">Voice</string>
+    <string name="voice_cog">Cog</string>
+    <string name="voice_cog_body">Cog\'s own voice, made for this app and spoken on the phone. English only: Greek uses Robot Cog</string>
+    <string name="voice_robot_cog">Robot Cog</string>
+    <string name="voice_robot_cog_body">A polite little robot with a metallic shimmer</string>
+    <string name="voice_natural">Natural</string>
+    <string name="voice_natural_body">The phone\'s voice, no effects</string>
+    <string name="voice_classic">Classic robot</string>
+    <string name="voice_classic_body">Flat and buzzy, straight out of a 1950s film</string>
+    <string name="voice_tiny">Tiny bot</string>
+    <string name="voice_tiny_body">Small, quick and squeaky</string>
+    <string name="voice_big">Big bot</string>
+    <string name="voice_big_body">Deep, slow and heavy</string>
+    <string name="pref_voice_gender_title">Voice type</string>
+    <string name="pref_voice_gender_body">Phones often have only female voices for a language; a male voice is then made from one on the phone</string>
+    <string name="gender_male">Male</string>
+    <string name="gender_female">Female</string>
+    <string name="pref_base_voice_title">Base voice</string>
+    <string name="pref_base_voice_body">The phone voice the effects are applied to</string>
+    <string name="base_voice_auto">Automatic</string>
+    <string name="base_voice_item">%1$s · voice %2$d</string>
+    <string name="base_voice_item_male">%1$s · voice %2$d · male</string>
+    <string name="base_voice_item_female">%1$s · voice %2$d · female</string>
+    <string name="base_voice_measuring">Listening to each voice to tell male from female…</string>
+    <string name="voice_calibration">Hello there. How are you doing today? I hope everything is going well.</string>
+    <string name="base_voice_none">No offline voices for this language. Install one in your phone\'s text-to-speech settings.</string>
+    <string name="voice_preview_text">Greetings. I am at your service. Shall I set a timer, or play some music?</string>
+
+    <string name="section_wake">Wake word</string>
+    <string name="pref_wake_title">Wake word</string>
+    <string name="pref_wake_body">Say “%1$s” to open the assistant hands-free</string>
+    <string name="pref_wake_phrase_title">Wake phrase</string>
+    <string name="wake_phrase_help">English words only (the offline listener is English). Two or three words work best, like “ok Cog” or “hey computer”.</string>
+    <string name="wake_problem_empty">Type a phrase</string>
+    <string name="wake_problem_short">Too short: a single short word would fire during conversations</string>
+    <string name="wake_problem_long">Use four words or fewer</string>
+    <string name="wake_problem_english">Use English letters (a–z)</string>
+    <string name="wake_problem_unknown">The offline listener doesn\'t know “%1$s”. Try another word.</string>
+    <string name="wake_model_title">Offline listening model</string>
+    <string name="wake_model_missing">Not downloaded yet (41 MB, one time)</string>
+    <string name="wake_model_downloading">Downloading… %1$d%%</string>
+    <string name="wake_model_ready">Installed. Listening happens on the phone.</string>
+    <string name="wake_model_failed">Download failed. Check the connection and retry.</string>
+    <string name="step_overlay_title">Display over other apps</string>
+    <string name="step_overlay_body">Lets the wake word open the assistant while you\'re in another app</string>
+    <string name="step_notifications_title">Notifications</string>
+    <string name="step_notifications_body">Shows that the wake word is listening, with a button to turn it off</string>
+    <string name="wake_status_listening">Listening for “%1$s”</string>
+    <string name="wake_status_loading">Starting…</string>
+    <string name="wake_status_paused">Paused while the assistant is open</string>
+    <string name="wake_status_failed">Couldn\'t start listening. Another app may be using the microphone.</string>
+    <string name="wake_privacy">Audio is processed on the phone and never stored or sent anywhere. Android shows the microphone indicator while it listens, and it uses some extra battery.</string>
+    <string name="wake_channel">Wake word</string>
+    <string name="wake_notification_title">Listening for “%1$s”</string>
+    <string name="wake_notification_body">On the phone only. Tap for settings.</string>
+    <string name="wake_notification_stop">Turn off</string>
+    <string name="wake_alert_channel">Wake word alerts</string>
+    <string name="wake_alert_title">I heard you</string>
+    <string name="wake_alert_body">Tap to talk. Allow “display over other apps” and I\'ll open by myself.</string>
+    <string name="wake_reminder_channel">Wake word reminders</string>
+    <string name="wake_reminder_title">Tap to resume “%1$s”</string>
+    <string name="wake_reminder_body">Android needs you to open the app once after a restart before it can listen.</string>
+
+    <string name="section_appearance">Appearance</string>
+    <string name="pref_theme_title">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="pref_dynamic_title">Wallpaper colors</string>
+    <string name="pref_dynamic_body">Match your device\'s Material You palette</string>
+    <string name="pref_blur_title">Blur background</string>
+    <string name="pref_blur_body">Frost whatever is behind the search panel</string>
+
+    <string name="section_privacy">Privacy</string>
+    <string name="privacy_title">Your requests stay on the device</string>
+    <string name="privacy_body">Commands are understood on the phone itself, with no AI service and no cloud. Alarms, timers, the flashlight, volume, media, conversions, the world clock, apps, contacts and calculations never leave your phone. The wake word is heard by an offline listener on the phone. Web suggestions and instant answers send what you type to DuckDuckGo. Weather sends a city name, or your location rounded to about 1 km, to Open-Meteo. “What is…” questions are sent to Wikipedia. The name of an artist, song or album you ask Spotify to play is looked up on Wikidata, once. The optional “press play in Spotify” helper only looks at Spotify, for a few seconds after you ask. Replies are spoken by the phone\'s own offline voice.</string>
+    <string name="version">Version %1$s</string>
+
+    <!-- Saved Spotify playlists -->
+    <string name="section_playlists">Spotify playlists</string>
+    <string name="playlists_intro">Say “play my road trip playlist”, or just “play road trip”. To add one, open it in Spotify, tap Share → Copy link, then Add playlist here. Albums, artists and songs work too.</string>
+    <string name="playlists_add">Add playlist</string>
+    <string name="playlist_name_label">Name to say</string>
+    <string name="playlist_link_label">Spotify link</string>
+    <string name="playlist_link_hint">From Share → Copy link in Spotify</string>
+    <string name="playlist_paste">Paste</string>
+    <string name="playlist_save">Save</string>
+    <string name="playlist_cancel">Cancel</string>
+    <string name="playlist_remove">Remove %1$s</string>
+    <string name="playlist_kind_playlist">Playlist</string>
+    <string name="playlist_kind_album">Album</string>
+    <string name="playlist_kind_artist">Artist</string>
+    <string name="playlist_kind_track">Song</string>
+    <string name="playlist_kind_link">Spotify link</string>
+
+    <!-- Optional accessibility helper that presses play in Spotify -->
+    <string name="press_service_label">Cog: press play in Spotify</string>
+    <string name="press_service_description">After you ask Cog to play an artist, album, song or playlist on Spotify, this taps the play button on the page Spotify opens, once. It only acts in Spotify, only for a few seconds after you ask, and reads nothing else.</string>
+    <string name="step_press_title">Press play in Spotify</string>
+    <string name="step_press_body">Spotify opens what you ask for but won\'t start it for other apps. This lets Cog tap its play button once, right after you ask; it only works inside Spotify. In the list, pick “Cog: press play in Spotify”. If the switch is greyed out: App info › ⋮ › Allow restricted settings.</string>
+
+    <!-- Spotify connection (the user's own Client ID) -->
+    <string name="section_spotify">Spotify connection</string>
+    <string name="spotify_connect_intro">Optional. With your own Spotify Client ID, Cog starts the music in Spotify by itself, through Spotify\'s official connection. Registering is free, but Spotify requires the account that registers to have Premium.</string>
+    <string name="spotify_step1">1. Open the Spotify developer dashboard, log in, and create an app. Under “Which API/SDKs are you planning to use?”, tick Android.</string>
+    <string name="spotify_open_dashboard">Open the dashboard</string>
+    <string name="spotify_step2">2. Add the redirect URI below under Redirect URIs, and the package name and SHA1 fingerprint under Android packages.</string>
+    <string name="spotify_step3">3. Copy your app\'s Client ID from the dashboard into the field below, tap Connect and allow Cog in Spotify.</string>
+    <string name="spotify_redirect">Redirect URI</string>
+    <string name="spotify_package">Package name</string>
+    <string name="spotify_fingerprint">SHA1 fingerprint</string>
+    <string name="spotify_copy">Copy %1$s</string>
+    <string name="spotify_client_id">Client ID</string>
+    <string name="spotify_client_id_invalid">A Client ID is 32 letters and numbers</string>
+    <string name="spotify_connect">Connect</string>
+    <string name="spotify_status_not_set">Add your Client ID first.</string>
+    <string name="spotify_status_connecting">Connecting to Spotify…</string>
+    <string name="spotify_status_connected">Connected. Music now starts in Spotify by itself.</string>
+    <string name="spotify_status_not_authorized">Spotify hasn\'t allowed it yet. Tap Connect and accept in Spotify.</string>
+    <string name="spotify_status_no_spotify">Spotify isn\'t installed.</string>
+    <string name="spotify_status_not_logged_in">Log in to Spotify first.</string>
+    <string name="spotify_status_failed">Couldn\'t connect (%1$s). Check the Client ID, redirect URI, package name and fingerprint in the dashboard.</string>
+    <string name="spotify_connect_again">Connect again</string>
+    <string name="spotify_status_ready">Tap Connect. Spotify will ask you to allow Cog, once.</string>
+    <string name="spotify_status_authorizing">Waiting for your OK in Spotify…</string>
+    <string name="spotify_status_timeout">Spotify didn\'t answer. Open the Spotify app, make sure you\'re logged in, then tap Connect again.</string>
+    <string name="spotify_status_refused">Spotify said no: %1$s. Check that the dashboard has exactly this redirect URI, package name and fingerprint.</string>
+
+    <!-- Settings menu: one page per group -->
+    <string name="navigate_back">Back</string>
+    <string name="page_permissions">Permissions</string>
+    <string name="page_spotify">Spotify</string>
+    <string name="page_about">About</string>
+    <string name="summary_permissions_all">All allowed</string>
+    <string name="summary_permissions_count">%1$d of %2$d allowed</string>
+    <string name="summary_spotify_connected">Connected</string>
+    <string name="summary_spotify_off">Not connected · playlists</string>
+    <string name="summary_spotify_unfinished">Setup not finished</string>
+    <string name="summary_wake_on">On · “%1$s”</string>
+    <string name="summary_wake_off">Off</string>
+    <string name="summary_about">Privacy · version %1$s</string>
+    <string name="spotify_change">Change</string>
+</resources>
