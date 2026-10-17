@@ -135,4 +135,29 @@ class SpotifyTest {
         assertEquals("0P4JuEXYJmu2Q7BTtQW5nR", SpotifyCatalog.parseClaim(claims, "P2207"))
         assertNull(SpotifyCatalog.parseClaim("""{"claims":{}}""", "P1902"))
     }
+
+    /** Sadomas, a Greek rapper Wikidata doesn't have, as MusicBrainz knows him. */
+    @Test
+    fun musicBrainzFindsArtistsWikidataLacks() {
+        val search = """{"count":2,"artists":[
+            {"id":"ed12a438-8e35-4d2a-a175-ce5d869ce7d6","score":100,"name":"Sadomas","disambiguation":"Greek Rapper"},
+            {"id":"0e936b57-1219-4ef4-8753-7f4bc15d66d9","score":83,"name":"Thitis x Sadomas"},
+            {"id":"11111111-1111-1111-1111-111111111111","score":70,"name":"Someone Else","aliases":[{"name":"Sadomas"}]}]}"""
+        assertEquals(
+            listOf("ed12a438-8e35-4d2a-a175-ce5d869ce7d6", "11111111-1111-1111-1111-111111111111"),
+            SpotifyCatalog.parseMusicBrainzArtists(search, "sadomas"),
+        )
+        // Speech recognition splits names it doesn't know.
+        assertEquals("ed12a438-8e35-4d2a-a175-ce5d869ce7d6", SpotifyCatalog.parseMusicBrainzArtists(search, "Sado mas").first())
+        assertEquals(emptyList<String>(), SpotifyCatalog.parseMusicBrainzArtists(search, "thitis"))
+
+        val details = """{"name":"Sadomas","relations":[
+            {"type":"bandsintown","ended":false,"url":{"resource":"https://www.bandsintown.com/a/3821979"}},
+            {"type":"free streaming","ended":true,"url":{"resource":"https://open.spotify.com/artist/0000000000000000000000"}},
+            {"type":"free streaming","ended":false,"url":{"resource":"https://open.spotify.com/album/5J5fnu7PEwhgzdkiBBtblw"}},
+            {"type":"free streaming","ended":false,"url":{"resource":"https://open.spotify.com/artist/3eZXDyJChvCDzsAGtNeGLP"}},
+            {"type":"free streaming","ended":false,"url":{"resource":"https://www.deezer.com/artist/11199068"}}]}"""
+        assertEquals("3eZXDyJChvCDzsAGtNeGLP", SpotifyCatalog.parseMusicBrainzSpotify(details))
+        assertNull(SpotifyCatalog.parseMusicBrainzSpotify("""{"name":"Nobody","relations":[]}"""))
+    }
 }
