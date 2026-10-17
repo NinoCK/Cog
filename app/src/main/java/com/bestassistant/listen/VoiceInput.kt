@@ -2,6 +2,9 @@ package com.bestassistant.listen
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -43,6 +46,22 @@ class VoiceInput(
 
     val isAvailable: Boolean get() = SpeechRecognizer.isRecognitionAvailable(context)
 
+    private val audio = context.getSystemService(AudioManager::class.java)
+
+    /**
+     * Held while listening. A transient, exclusive focus makes music players pause rather than
+     * duck, and they resume by themselves when it's given back, but only if they were playing.
+     */
+    private val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build(),
+        )
+        .setOnAudioFocusChangeListener { }
+        .build()
+
     fun start(locale: Locale) {
         cancel()
         val engine = runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull() ?: run {
@@ -52,6 +71,7 @@ class VoiceInput(
         recognizer = engine
         heard = false
         active = true
+        audio.requestAudioFocus(focus)
         engine.setRecognitionListener(listener)
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -85,14 +105,17 @@ class VoiceInput(
         active = false
         runCatching { engine.cancel() }
         runCatching { engine.destroy() }
+        audio.abandonAudioFocusRequest(focus)
         onState(ListenState.Idle)
     }
 
+    /** Runs before the result is delivered, so a spoken "pause" isn't undone by the music resuming. */
     private fun finish() {
         val engine = recognizer
         recognizer = null
         active = false
         engine?.let { runCatching { it.destroy() } }
+        audio.abandonAudioFocusRequest(focus)
         onState(ListenState.Idle)
     }
 
