@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Hearing
-import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Wc
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.SmartToy
@@ -56,7 +55,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import com.bestassistant.language.AssistantLanguage
 import com.bestassistant.speech.VoiceGender
 import com.bestassistant.speech.VoiceOption
 import com.bestassistant.speech.VoiceStyle
@@ -66,33 +64,6 @@ import com.bestassistant.wake.WakePhrase
 import com.fastsearch.R
 import com.fastsearch.data.AppSettings
 import com.fastsearch.fastSearch
-
-/** Language: what the assistant understands, says and shows. Changing it recreates the screen. */
-@Composable
-internal fun LanguagePicker(selected: AssistantLanguage, onSelect: (AssistantLanguage) -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Language, contentDescription = null, tint = colors.onSurfaceVariant)
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text(stringResource(R.string.pref_language_title), style = MaterialTheme.typography.bodyLarge)
-                Text(stringResource(R.string.pref_language_body), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        val languages = AssistantLanguage.entries
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            languages.forEachIndexed { index, language ->
-                SegmentedButton(
-                    selected = selected == language,
-                    onClick = { onSelect(language) },
-                    shape = SegmentedButtonDefaults.itemShape(index, languages.size),
-                ) { Text(stringResource(language.label), maxLines = 1) }
-            }
-        }
-    }
-}
 
 /** The voice styles, each previewed by speaking a line in it. */
 @Composable

@@ -19,14 +19,29 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AirplanemodeActive
 import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.AutoMode
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.Map
+import androidx.compose.material.icons.rounded.TravelExplore
+import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material.icons.rounded.BatterySaver
 import androidx.compose.material.icons.rounded.Bluetooth
+import androidx.compose.material.icons.rounded.Cake
+import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.LocalParking
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.ShareLocation
+import androidx.compose.material.icons.rounded.SmartDisplay
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -76,6 +91,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -83,11 +99,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestassistant.commands.Command
 import com.bestassistant.commands.MediaAction
+import com.bestassistant.commands.SavedPlace
 import com.bestassistant.commands.SettingsPanel
 import com.bestassistant.commands.Switch
 import com.bestassistant.commands.VolumeChange
 import com.bestassistant.commands.WeatherDay
 import com.bestassistant.device.TimeText
+import com.bestassistant.namedays.NameDayCalendar
 import com.bestassistant.speech.WeatherWords
 import com.bestassistant.weather.DayForecast
 import com.bestassistant.weather.Forecast
@@ -98,10 +116,14 @@ import com.fastsearch.data.Contact
 import com.fastsearch.fastSearch
 import kotlinx.coroutines.delay
 import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -188,10 +210,89 @@ private fun describe(command: Command, contact: Contact?): CommandText {
                 else -> CommandText(Icons.Rounded.MusicNote, stringResource(R.string.cmd_now_playing), subtitle)
             }
         }
-        is Command.Navigate -> CommandText(
-            Icons.Rounded.Directions,
-            stringResource(R.string.cmd_navigate, command.destination.replaceFirstChar(Char::titlecase)),
-            stringResource(R.string.cmd_maps_app),
+        is Command.Navigate -> {
+            val settings = context.fastSearch.preferences.settings.value
+            val saved = when (command.place) {
+                SavedPlace.HOME -> settings.homeAddress
+                SavedPlace.WORK -> settings.workAddress
+                null -> null
+            }?.trim()
+            CommandText(
+                when {
+                    command.map -> Icons.Rounded.Map
+                    command.place == SavedPlace.HOME -> Icons.Rounded.Home
+                    command.place == SavedPlace.WORK -> Icons.Rounded.Work
+                    else -> Icons.Rounded.Directions
+                },
+                when {
+                    command.map -> stringResource(R.string.cmd_map, command.destination.replaceFirstChar(Char::titlecase))
+                    command.place == SavedPlace.HOME -> stringResource(R.string.cmd_navigate_home)
+                    command.place == SavedPlace.WORK -> stringResource(R.string.cmd_navigate_work)
+                    else -> stringResource(R.string.cmd_navigate, command.destination.replaceFirstChar(Char::titlecase))
+                },
+                saved?.takeIf { it.isNotEmpty() }
+                    ?: command.app?.label
+                    ?: stringResource(R.string.cmd_maps_app),
+            )
+        }
+        is Command.WebSearch -> CommandText(
+            Icons.Rounded.TravelExplore,
+            stringResource(R.string.cmd_search, command.query),
+            stringResource(context.fastSearch.preferences.settings.value.engine.label),
+        )
+        is Command.YouTubeSearch -> CommandText(Icons.Rounded.SmartDisplay, stringResource(R.string.cmd_youtube, command.query), "YouTube")
+        is Command.Remind -> {
+            val now = LocalDateTime.now()
+            val subtitle = command.time?.let { time ->
+                val at = time.resolve(now)
+                val clock = TimeText.clock(context, at.hour, at.minute)
+                when (ChronoUnit.DAYS.between(now.toLocalDate(), at.toLocalDate())) {
+                    0L -> stringResource(R.string.cmd_reminder_today, clock)
+                    1L -> stringResource(R.string.cmd_reminder_tomorrow, clock)
+                    else -> "${at.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))}, $clock"
+                }
+            } ?: stringResource(R.string.cmd_reminder_ask)
+            CommandText(
+                Icons.Rounded.NotificationsActive,
+                command.what?.let { stringResource(R.string.cmd_reminder, it.replaceFirstChar(Char::titlecase)) } ?: stringResource(R.string.cmd_reminder_plain),
+                subtitle,
+            )
+        }
+        Command.ShowReminders, Command.CancelReminders -> {
+            val count = context.fastSearch.reminders.upcoming().size
+            CommandText(
+                if (command == Command.ShowReminders) Icons.Rounded.Notifications else Icons.Rounded.NotificationsOff,
+                stringResource(if (command == Command.ShowReminders) R.string.cmd_show_reminders else R.string.cmd_cancel_reminders),
+                pluralStringResource(R.plurals.cmd_reminders_count, count, count),
+            )
+        }
+        Command.SaveParking -> CommandText(Icons.Rounded.LocalParking, stringResource(R.string.cmd_save_parking), stringResource(R.string.cmd_uses_location))
+        is Command.FindCar -> {
+            val spot = context.fastSearch.parking.spot()
+            val subtitle = spot?.let {
+                val at = Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault())
+                val clock = TimeText.clock(context, at)
+                val day = if (at.toLocalDate() == LocalDate.now()) clock else "${at.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))}, $clock"
+                stringResource(R.string.cmd_parked_at, day)
+            } ?: stringResource(R.string.cmd_no_parking)
+            CommandText(
+                if (command.directions) Icons.AutoMirrored.Rounded.DirectionsWalk else Icons.Rounded.DirectionsCar,
+                stringResource(if (command.directions) R.string.cmd_find_car else R.string.cmd_where_car),
+                subtitle,
+            )
+        }
+        is Command.ShareLocation -> CommandText(
+            Icons.Rounded.ShareLocation,
+            stringResource(R.string.cmd_share_location, contact?.name ?: command.who),
+            contact?.number.orEmpty(),
+        )
+        is Command.RunTask -> CommandText(Icons.Rounded.AutoMode, stringResource(R.string.cmd_task, command.name), "Tasker")
+        is Command.SmartHome -> CommandText(
+            Icons.Rounded.Lightbulb,
+            command.text.replaceFirstChar(Char::titlecase),
+            stringResource(
+                if (context.fastSearch.commands.hasHomeAssistant) R.string.cmd_smart_home else R.string.cmd_smart_home_not_set_up,
+            ),
         )
         is Command.Camera -> CommandText(
             if (command.video) Icons.Rounded.Videocam else Icons.Rounded.PhotoCamera,
@@ -221,7 +322,7 @@ private fun describe(command: Command, contact: Contact?): CommandText {
             command.body?.let { "“$it”" } ?: contact?.number.orEmpty(),
         )
         // Shown by their own rows (answers, weather card, Wikipedia card, app grid).
-        is Command.Convert, is Command.Clock, is Command.OpenApp, is Command.Weather, is Command.Lookup ->
+        is Command.Convert, is Command.Clock, is Command.OpenApp, is Command.Weather, is Command.Lookup, is Command.NameDays, is Command.NameDay ->
             CommandText(Icons.Rounded.Schedule, "", "")
     }
 }
@@ -251,6 +352,7 @@ internal fun CommandRow(
     when (command) {
         is Command.Convert -> return ConversionRow(command, highlighted, topHitBounds, actions)
         is Command.Clock -> return ClockRow(command, highlighted, topHitBounds, actions)
+        is Command.NameDays, is Command.NameDay -> return NameDayRow(command, highlighted, topHitBounds, actions)
         else -> Unit
     }
     val colors = MaterialTheme.colorScheme
@@ -397,6 +499,49 @@ private fun ClockRow(command: Command.Clock, highlighted: Boolean, topHitBounds:
         onSpeak = { actions.runCommand(command, null, null) },
         onCopy = { actions.copy("$time, $date") },
     )
+}
+
+/** "Today's name days: Konstantinos, Eleni", or the days a name celebrates. Tap reads it out. */
+@Composable
+private fun NameDayRow(command: Command, highlighted: Boolean, topHitBounds: BoundsHolder, actions: SearchActions) {
+    val context = LocalContext.current
+    val colors = MaterialTheme.colorScheme
+    val responder = context.fastSearch.responder
+    val today = LocalDate.now()
+    val (caption, value) = when (command) {
+        is Command.NameDays -> {
+            val names = NameDayCalendar.on(command.date).joinToString(", ") { responder.nameShown(it.name) }
+            stringResource(R.string.nameday_card_day, responder.dayName(command.date, today, capital = false)) to
+                names.ifEmpty { stringResource(R.string.nameday_card_nobody) }
+        }
+        is Command.NameDay -> {
+            val found = NameDayCalendar.find(command.name)
+            val dates = found?.let { NameDayCalendar.next(it, today) }.orEmpty()
+            val format = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
+            stringResource(R.string.nameday_card_name, found?.let { responder.nameShown(it.name) } ?: command.name) to
+                if (dates.isEmpty()) stringResource(R.string.nameday_card_unknown) else dates.joinToString(" · ") { it.format(format) }
+        }
+        else -> return
+    }
+    ListRow(
+        highlighted = highlighted,
+        bounds = if (highlighted) topHitBounds else null,
+        onClick = { actions.runCommand(command, null, null) },
+        leading = { IconBadge(Icons.Rounded.Cake, colors.primary, colors.onPrimary) },
+        trailing = { ReadAloudButton { actions.runCommand(command, null, null) } },
+    ) {
+        Column {
+            Text(caption, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = colors.onSurface,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 private fun formatHours(hours: Double): String =
@@ -630,8 +775,9 @@ private fun DayCell(day: DayForecast, index: Int) {
 internal fun ExamplesRow(onPick: (String) -> Unit) {
     val examples = listOf(
         R.string.example_music, R.string.example_alarm, R.string.example_weather, R.string.example_wiki,
-        R.string.example_timer, R.string.example_torch, R.string.example_time, R.string.example_convert,
-        R.string.example_call, R.string.example_media,
+        R.string.example_home, R.string.example_timer, R.string.example_search, R.string.example_torch,
+        R.string.example_time, R.string.example_convert, R.string.example_call, R.string.example_media,
+        R.string.example_reminder, R.string.example_nameday, R.string.example_youtube, R.string.example_parking,
     ).map { stringResource(it) }
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),

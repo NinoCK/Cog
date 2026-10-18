@@ -3,14 +3,15 @@ package com.bestassistant.speech
 import android.content.Context
 import com.bestassistant.commands.Command
 import com.bestassistant.commands.MediaAction
+import com.bestassistant.commands.SavedPlace
 import com.bestassistant.commands.SettingsPanel
 import com.bestassistant.commands.Switch
 import com.bestassistant.commands.UnitConverter
 import com.bestassistant.commands.VolumeChange
 import com.bestassistant.commands.WeatherDay
 import com.bestassistant.device.TimeText
-import com.bestassistant.language.AppLanguage
 import com.bestassistant.media.MediaControl
+import com.bestassistant.namedays.NameDayCalendar
 import com.bestassistant.weather.Forecast
 import com.bestassistant.wiki.Article
 import com.bestassistant.wiki.WikipediaClient
@@ -18,9 +19,11 @@ import com.fastsearch.R
 import com.fastsearch.data.Contact
 import com.fastsearch.search.Calculator
 import java.time.Duration
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
@@ -81,7 +84,22 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
         Command.LikeSong -> s(R.string.say_liked)
         is Command.Shuffle -> s(if (command.on) R.string.say_shuffle_on else R.string.say_shuffle_off)
         is Command.Repeat -> s(if (command.on) R.string.say_repeat_on else R.string.say_repeat_off)
-        is Command.Navigate -> s(R.string.say_navigate, command.destination)
+        is Command.Navigate -> when {
+            command.map -> s(R.string.say_map, command.destination)
+            command.place == SavedPlace.HOME -> s(R.string.say_navigate_home)
+            command.place == SavedPlace.WORK -> s(R.string.say_navigate_work)
+            else -> s(R.string.say_navigate, command.destination)
+        }
+        is Command.WebSearch -> s(R.string.say_search, command.query)
+        is Command.YouTubeSearch -> s(R.string.say_youtube, command.query)
+        // Said by the runner, which knows the time it set and what it found.
+        is Command.Remind, Command.ShowReminders, Command.CancelReminders, Command.SaveParking -> null
+        is Command.FindCar -> s(R.string.say_find_car, "")
+        is Command.ShareLocation -> s(R.string.say_share_location, contact?.name ?: command.who)
+        is Command.NameDays -> forNameDays(command.date)
+        is Command.NameDay -> forNameDay(command.name)
+        is Command.RunTask -> s(R.string.say_task, command.name)
+        is Command.SmartHome -> null // Home Assistant answers for itself
         is Command.Camera -> s(if (command.video) R.string.say_video else R.string.say_photo)
         is Command.OpenPanel -> {
             val name = context.getString(panelName(command.panel))
@@ -108,6 +126,8 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
     fun forCalculation(result: Calculator.Result) = s(R.string.say_calculation, result.formatted)
 
     fun forNothing(query: String) = s(R.string.say_nothing, query)
+
+    fun forNoApp(name: String) = s(R.string.say_no_app, name)
 
     fun forFailure(message: String) = message
 
@@ -165,6 +185,43 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
 
     // endregion
 
+    // region Name days
+
+    /** "Today's name days: Konstantinos, Konstantina and Eleni." */
+    fun forNameDays(date: LocalDate, today: LocalDate = LocalDate.now()): String {
+        val names = NameDayCalendar.on(date).map { nameShown(it.name) }
+        val day = dayName(date, today, capital = true)
+        return if (names.isEmpty()) s(R.string.say_nameday_none, day) else s(R.string.say_namedays, day, list(names))
+    }
+
+    /** "Eleni's name day is on 21 May." */
+    fun forNameDay(name: String, today: LocalDate = LocalDate.now()): String {
+        val found = NameDayCalendar.find(name) ?: return s(R.string.say_nameday_unknown, name)
+        val dates = NameDayCalendar.next(found, today)
+        val shown = nameShown(found.name)
+        return when {
+            dates.isEmpty() -> s(R.string.say_nameday_unknown, name)
+            dates.first() == today -> s(R.string.say_nameday_today, shown)
+            else -> s(R.string.say_nameday, shown, list(dates.map { dayName(it, today, capital = false) }))
+        }
+    }
+
+    /** Greek names in Latin letters. */
+    fun nameShown(name: String): String =
+        NameDayCalendar.latin(name).replaceFirstChar { it.titlecase(Locale.ROOT) }
+
+    /** "today", "tomorrow", or "on 21 May". */
+    fun dayName(date: LocalDate, today: LocalDate, capital: Boolean): String {
+        val text = when (date) {
+            today -> s(R.string.nameday_today)
+            today.plusDays(1) -> s(R.string.nameday_tomorrow)
+            else -> s(R.string.nameday_on, date.format(DateTimeFormatter.ofPattern("d MMMM", context.resources.configuration.locales[0])))
+        }
+        return if (capital) text.replaceFirstChar { it.titlecase(Locale.getDefault()) } else text
+    }
+
+    // endregion
+
     // region Wikipedia
 
     fun forArticle(article: Article) = s(R.string.say_wikipedia, WikipediaClient.spokenSummary(article.extract))
@@ -216,8 +273,7 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
 
     /** Units read as words ("3.1 miles"), singular for exactly one. */
     private fun unitName(unit: UnitConverter.Unit, amount: Double): String {
-        val names = if (AppLanguage.isGreek) greekUnitNames else unitNames
-        val (one, many) = names[unit.symbol] ?: return unit.symbol
+        val (one, many) = unitNames[unit.symbol] ?: return unit.symbol
         return if (amount == 1.0) one else many
     }
 
@@ -263,24 +319,6 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
             "h" to ("hour" to "hours"), "days" to ("day" to "days"), "weeks" to ("week" to "weeks"), "years" to ("year" to "years"),
             "J" to ("joule" to "joules"), "kJ" to ("kilojoule" to "kilojoules"), "cal" to ("calorie" to "calories"),
             "kcal" to ("kilocalorie" to "kilocalories"), "kWh" to ("kilowatt hour" to "kilowatt hours"),
-        )
-
-        val greekUnitNames = mapOf(
-            "mm" to ("χιλιοστό" to "χιλιοστά"), "cm" to ("εκατοστό" to "εκατοστά"), "m" to ("μέτρο" to "μέτρα"),
-            "km" to ("χιλιόμετρο" to "χιλιόμετρα"), "in" to ("ίντσα" to "ίντσες"), "ft" to ("πόδι" to "πόδια"),
-            "yd" to ("γιάρδα" to "γιάρδες"), "mi" to ("μίλι" to "μίλια"), "nmi" to ("ναυτικό μίλι" to "ναυτικά μίλια"),
-            "mg" to ("χιλιοστόγραμμο" to "χιλιοστόγραμμα"), "g" to ("γραμμάριο" to "γραμμάρια"), "kg" to ("κιλό" to "κιλά"),
-            "t" to ("τόνος" to "τόνοι"), "oz" to ("ουγγιά" to "ουγγιές"), "lb" to ("λίβρα" to "λίβρες"),
-            "ml" to ("χιλιοστόλιτρο" to "χιλιοστόλιτρα"), "L" to ("λίτρο" to "λίτρα"), "gal" to ("γαλόνι" to "γαλόνια"),
-            "cup" to ("φλιτζάνι" to "φλιτζάνια"), "tsp" to ("κουταλάκι" to "κουταλάκια"),
-            "tbsp" to ("κουταλιά της σούπας" to "κουταλιές της σούπας"),
-            "°C" to ("βαθμός Κελσίου" to "βαθμοί Κελσίου"), "°F" to ("βαθμός Φαρενάιτ" to "βαθμοί Φαρενάιτ"),
-            "K" to ("κέλβιν" to "κέλβιν"), "km/h" to ("χιλιόμετρο την ώρα" to "χιλιόμετρα την ώρα"),
-            "mph" to ("μίλι την ώρα" to "μίλια την ώρα"), "kn" to ("κόμβος" to "κόμβοι"),
-            "m²" to ("τετραγωνικό μέτρο" to "τετραγωνικά μέτρα"), "ha" to ("εκτάριο" to "εκτάρια"),
-            "s" to ("δευτερόλεπτο" to "δευτερόλεπτα"), "min" to ("λεπτό" to "λεπτά"), "h" to ("ώρα" to "ώρες"),
-            "days" to ("μέρα" to "μέρες"), "weeks" to ("εβδομάδα" to "εβδομάδες"), "years" to ("χρόνος" to "χρόνια"),
-            "kcal" to ("θερμίδα" to "θερμίδες"), "MB" to ("μεγαμπάιτ" to "μεγαμπάιτ"), "GB" to ("γιγαμπάιτ" to "γιγαμπάιτ"),
         )
     }
 }

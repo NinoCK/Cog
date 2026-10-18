@@ -8,7 +8,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.bestassistant.commands.Command
 import com.bestassistant.commands.CommandParser
-import com.bestassistant.commands.GreekCommandParser
 import com.bestassistant.commands.WeatherDay
 import com.bestassistant.weather.Forecast
 import com.bestassistant.wiki.Article
@@ -297,7 +296,7 @@ class SearchViewModel(private val app: FastSearchApp) : ViewModel() {
             query = q,
             apps = ranked.map { it.entry },
             bestAppScore = ranked.firstOrNull()?.base ?: 0,
-            calculation = Calculator.evaluate(q) ?: GreekCommandParser.arithmetic(q)?.let { Calculator.evaluate(it) },
+            calculation = Calculator.evaluate(q),
             url = detectUrl(q) ?: (command as? Command.OpenApp)?.let { detectUrl(it.name) },
             command = command,
         )
@@ -329,6 +328,7 @@ class SearchViewModel(private val app: FastSearchApp) : ViewModel() {
         private fun contactQuery(q: String): String = when (val command = CommandParser.parse(q)) {
             is Command.Call -> command.who
             is Command.Message -> command.who
+            is Command.ShareLocation -> command.who
             else -> q
         }
 

@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.core.content.edit
-import com.bestassistant.language.AssistantLanguage
 import com.bestassistant.speech.VoiceGender
 import com.bestassistant.speech.VoiceStyle
 import com.fastsearch.R
@@ -57,11 +56,10 @@ data class AppSettings(
     /** Answer "what is ..." from Wikipedia. */
     val wikipedia: Boolean = true,
     val speech: SpeechMode = SpeechMode.ALWAYS,
-    val language: AssistantLanguage = AssistantLanguage.SYSTEM,
     val voiceStyle: VoiceStyle = VoiceStyle.COG,
     /** Cog has a man's voice, so male by default. */
     val voiceGender: VoiceGender = VoiceGender.MALE,
-    /** A text-to-speech voice name; null picks the best installed voice for the language. */
+    /** A text-to-speech voice name; null picks the best installed English voice. */
     val systemVoice: String? = null,
     /** Start listening as soon as the overlay opens (typing stops it). */
     val listenOnOpen: Boolean = true,
@@ -70,11 +68,23 @@ data class AppSettings(
     val wakePhrase: String = DEFAULT_WAKE_PHRASE,
     /** The user's own Spotify developer Client ID; empty when they haven't set one up. */
     val spotifyClientId: String = "",
+    /** Which app "take me to ..." opens. */
+    val navigationApp: NavigationChoice = NavigationChoice.AUTO,
+    /** Where "take me home" goes; empty lets Waze use its own saved Home. */
+    val homeAddress: String = "",
+    val workAddress: String = "",
+    /** The user's Home Assistant, e.g. http://homeassistant.local:8123; empty when not set up. */
+    val homeAssistantUrl: String = "",
+    /** A long-lived access token created in the user's Home Assistant profile. */
+    val homeAssistantToken: String = "",
 ) {
     companion object {
         const val DEFAULT_WAKE_PHRASE = "ok Cog"
     }
 }
+
+/** The app for directions: the first installed one, or the user's pick. */
+enum class NavigationChoice { AUTO, GOOGLE_MAPS, WAZE }
 
 /** When replies are read aloud. */
 enum class SpeechMode {
@@ -92,6 +102,9 @@ enum class SpeechMode {
  */
 class AppPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+
+    /** Credentials (the Home Assistant token), kept out of device backups: see res/xml/backup_rules.xml. */
+    private val secrets = context.getSharedPreferences(SECRETS_FILE, Context.MODE_PRIVATE)
     private val state = MutableStateFlow(read())
     val settings: StateFlow<AppSettings> = state.asStateFlow()
 
@@ -100,6 +113,7 @@ class AppPreferences(context: Context) {
 
     init {
         prefs.registerOnSharedPreferenceChangeListener(listener)
+        secrets.registerOnSharedPreferenceChangeListener(listener)
     }
 
     var askedForContacts: Boolean
@@ -113,6 +127,10 @@ class AppPreferences(context: Context) {
     var askedForLocation: Boolean
         get() = prefs.getBoolean(KEY_ASKED_LOCATION, false)
         set(value) = prefs.edit { putBoolean(KEY_ASKED_LOCATION, value) }
+
+    var askedForTasker: Boolean
+        get() = prefs.getBoolean(KEY_ASKED_TASKER, false)
+        set(value) = prefs.edit { putBoolean(KEY_ASKED_TASKER, value) }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         val next = transform(state.value)
@@ -131,7 +149,6 @@ class AppPreferences(context: Context) {
             putBoolean(KEY_RUN_SPOKEN, next.runSpokenCommands)
             putBoolean(KEY_WIKIPEDIA, next.wikipedia)
             putString(KEY_SPEECH, next.speech.name)
-            putString(KEY_LANGUAGE, next.language.name)
             putString(KEY_VOICE_STYLE, next.voiceStyle.name)
             putString(KEY_VOICE_GENDER, next.voiceGender.name)
             putString(KEY_SYSTEM_VOICE, next.systemVoice)
@@ -139,7 +156,12 @@ class AppPreferences(context: Context) {
             putBoolean(KEY_WAKE_WORD, next.wakeWord)
             putString(KEY_WAKE_PHRASE, next.wakePhrase)
             putString(KEY_SPOTIFY_CLIENT_ID, next.spotifyClientId)
+            putString(KEY_NAVIGATION_APP, next.navigationApp.name)
+            putString(KEY_HOME_ADDRESS, next.homeAddress)
+            putString(KEY_WORK_ADDRESS, next.workAddress)
+            putString(KEY_HA_URL, next.homeAssistantUrl)
         }
+        secrets.edit { putString(KEY_HA_TOKEN, next.homeAssistantToken) }
     }
 
     private fun read(): AppSettings {
@@ -158,7 +180,6 @@ class AppPreferences(context: Context) {
             runSpokenCommands = prefs.getBoolean(KEY_RUN_SPOKEN, defaults.runSpokenCommands),
             wikipedia = prefs.getBoolean(KEY_WIKIPEDIA, defaults.wikipedia),
             speech = runCatching { SpeechMode.valueOf(prefs.getString(KEY_SPEECH, null)!!) }.getOrDefault(defaults.speech),
-            language = AssistantLanguage.fromId(prefs.getString(KEY_LANGUAGE, null)),
             voiceStyle = VoiceStyle.fromId(prefs.getString(KEY_VOICE_STYLE, null)),
             voiceGender = VoiceGender.fromId(prefs.getString(KEY_VOICE_GENDER, null)),
             systemVoice = prefs.getString(KEY_SYSTEM_VOICE, null),
@@ -166,10 +187,17 @@ class AppPreferences(context: Context) {
             wakeWord = prefs.getBoolean(KEY_WAKE_WORD, defaults.wakeWord),
             wakePhrase = prefs.getString(KEY_WAKE_PHRASE, null)?.takeIf { it.isNotBlank() } ?: defaults.wakePhrase,
             spotifyClientId = prefs.getString(KEY_SPOTIFY_CLIENT_ID, null).orEmpty(),
+            navigationApp = runCatching { NavigationChoice.valueOf(prefs.getString(KEY_NAVIGATION_APP, null)!!) }
+                .getOrDefault(defaults.navigationApp),
+            homeAddress = prefs.getString(KEY_HOME_ADDRESS, null).orEmpty(),
+            workAddress = prefs.getString(KEY_WORK_ADDRESS, null).orEmpty(),
+            homeAssistantUrl = prefs.getString(KEY_HA_URL, null).orEmpty(),
+            homeAssistantToken = secrets.getString(KEY_HA_TOKEN, null).orEmpty(),
         )
     }
 
     private companion object {
+        const val SECRETS_FILE = "secrets"
         const val KEY_WEB = "web_suggestions"
         const val KEY_ANSWERS = "instant_answers"
         const val KEY_CONTACTS = "search_contacts"
@@ -185,7 +213,6 @@ class AppPreferences(context: Context) {
         const val KEY_RUN_SPOKEN = "run_spoken_commands"
         const val KEY_WIKIPEDIA = "wikipedia"
         const val KEY_SPEECH = "speech"
-        const val KEY_LANGUAGE = "language"
         const val KEY_VOICE_STYLE = "voice_style"
         const val KEY_VOICE_GENDER = "voice_gender"
         const val KEY_SYSTEM_VOICE = "system_voice"
@@ -193,6 +220,12 @@ class AppPreferences(context: Context) {
         const val KEY_WAKE_WORD = "wake_word"
         const val KEY_WAKE_PHRASE = "wake_phrase"
         const val KEY_ASKED_MIC = "asked_microphone"
+        const val KEY_ASKED_TASKER = "asked_tasker"
         const val KEY_SPOTIFY_CLIENT_ID = "spotify_client_id"
+        const val KEY_NAVIGATION_APP = "navigation_app"
+        const val KEY_HOME_ADDRESS = "home_address"
+        const val KEY_WORK_ADDRESS = "work_address"
+        const val KEY_HA_URL = "home_assistant_url"
+        const val KEY_HA_TOKEN = "home_assistant_token"
     }
 }

@@ -132,6 +132,16 @@ class AssistActivity : ComponentActivity(), SearchActions {
         viewModel.refreshPermissions()
     }
 
+    /** A command waiting for the permissions it asked for ("remember where I parked" needs location); runs either way. */
+    private var afterPermissions: (() -> Unit)? = null
+
+    private val commandPermissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        awaitingResult = false
+        viewModel.refreshPermissions()
+        afterPermissions?.invoke()
+        afterPermissions = null
+    }
+
     private val imageSource = object : ImageSource {
         override fun cachedAppIcon(entry: AppEntry) = fastSearch.apps.cachedIcon(entry.key)
         override suspend fun appIcon(entry: AppEntry) = fastSearch.apps.icon(entry)
@@ -344,17 +354,20 @@ class AssistActivity : ComponentActivity(), SearchActions {
     /** An answer that was asked for (Enter, or voice) but whose data is still loading. */
     private var pendingAnswer: Command? = null
 
+    /** A question Cog asked back ("Which one?"): what's heard next answers it. */
+    private var question: Step.Ask? = null
+    private var questionAt = 0L
+
     private val isVoiceRequest: Boolean get() = voiceQuery != null && latestState.query == voiceQuery
 
-    /** Reads [text] aloud if the user's speech setting allows it for this request. */
-    private fun say(text: String?) {
-        text ?: return
+    /** Reads [text] aloud if the user's speech setting allows it for this request; [then] runs after it either way. */
+    private fun say(text: String?, then: (() -> Unit)? = null) {
         val allowed = when (fastSearch.preferences.settings.value.speech) {
             SpeechMode.ALWAYS -> true
             SpeechMode.VOICE_ONLY -> isVoiceRequest
             SpeechMode.OFF -> false
         }
-        if (allowed) fastSearch.speaker.speak(text)
+        if (text != null && allowed) fastSearch.speaker.speak(text, then) else then?.invoke()
     }
 
     private fun onStateChanged(state: SearchUiState, runSpoken: Boolean) {
@@ -429,27 +442,69 @@ class AssistActivity : ComponentActivity(), SearchActions {
                     launchApp(hit.entry, null)
                 }
             }
+            // Right after a cold start (the wake word) the app list may still be loading.
+            state.command is Command.OpenApp && fastSearch.apps.apps.value.isEmpty() -> Unit
+            state.command is Command.OpenApp -> {
+                pendingSpoken = null
+                val name = (state.command as Command.OpenApp).name
+                // "open the garage door" may be for Home Assistant rather than an app.
+                if (enabled) offerToHomeAssistant(state.query) { say(fastSearch.responder.forNoApp(name)) }
+            }
             hit is TopHit.Calculation -> {
                 pendingSpoken = null
                 say(fastSearch.responder.forCalculation(hit.result))
             }
             else -> {
-                // Nothing this assistant knows how to do: say so, and leave the results on screen.
+                // Nothing this assistant knows how to do: Home Assistant may, else say so and leave the results on screen.
                 pendingSpoken = null
-                if (state.command == null) say(fastSearch.responder.forNothing(state.query))
+                if (state.command == null) {
+                    if (enabled) {
+                        offerToHomeAssistant(state.query) { say(fastSearch.responder.forNothing(state.query)) }
+                    } else {
+                        say(fastSearch.responder.forNothing(state.query))
+                    }
+                }
             }
         }
         // Handled without running a command (a command already decided about the music itself).
         if (pendingSpoken == null) music.resume()
     }
 
-    override fun runCommand(command: Command, contact: Contact?, bounds: ComposeRect?) {
+    override fun runCommand(command: Command, contact: Contact?, bounds: ComposeRect?) = run(command, contact, bounds, askFirst = true)
+
+    /** What [command] needs and doesn't have yet: location for the car and "where I am", notifications for reminders. */
+    private fun missingPermissions(command: Command): List<String> = buildList {
+        // Exact location is asked for, but approximate will do (the reply then says how rough the spot is).
+        if (command.needsLocation && !fastSearch.location.hasPermission()) {
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+        val notifies = command is Command.Remind
+        if (notifies && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this@AssistActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    private fun run(command: Command, contact: Contact?, bounds: ComposeRect?, askFirst: Boolean) {
+        if (askFirst) {
+            val missing = missingPermissions(command)
+            if (missing.isNotEmpty()) {
+                voice.cancel()
+                // Asked once; after that the command says what's missing itself.
+                afterPermissions = { run(command, contact, bounds, askFirst = false) }
+                awaitingResult = true
+                commandPermissions.launch(missing.toTypedArray())
+                return
+            }
+        }
         voice.cancel()
         // "pause" and "play ..." decide what plays; anything else gets the music back first.
         if (command is Command.PlayMusic || command == Command.Media(MediaAction.PAUSE)) music.forget() else music.resume()
         if (command.usesMediaSession && !fastSearch.media.hasAccess()) {
             // One-time setup: Android's notification-access screen is what grants media control.
-            say(getString(R.string.error_media_access))
+            say(fastSearch.localized.getString(R.string.error_media_access))
             start(fastSearch.media.accessIntent(), bounds)
             return
         }
@@ -474,15 +529,73 @@ class AssistActivity : ComponentActivity(), SearchActions {
                     }
                 }
             }
+            is Step.Done, is Step.Failed, is Step.Ask -> finishStep(step, command, contact)
+            is Step.Remote -> {
+                haptic()
+                lifecycleScope.launch {
+                    // Some open an app with what they found ("send alex my location" opens Messages).
+                    when (val result = step.run()) {
+                        is Step.Launch -> launchStep(result, result.intents, command, contact, bounds)
+                        else -> finishStep(result, command, contact)
+                    }
+                }
+            }
+        }
+    }
+
+    /** Confirms a command that ran in-process (or failed), aloud and on screen, or asks what it needs to know. */
+    private fun finishStep(step: Step, command: Command?, contact: Contact?) {
+        when (step) {
             is Step.Done -> {
                 haptic()
                 step.confirmation?.let(::toastText)
-                say(fastSearch.responder.forCommand(command, contact, torchOn = fastSearch.commands.isTorchOn))
+                say(step.spoken ?: command?.let { fastSearch.responder.forCommand(it, contact, torchOn = fastSearch.commands.isTorchOn) })
                 dismissSignal++
             }
             is Step.Failed -> {
                 toastText(step.message)
                 say(step.message)
+            }
+            is Step.Ask -> ask(step)
+            is Step.Launch, is Step.Remote -> Unit
+        }
+    }
+
+    /** Asks [step]'s question, then listens for the answer. */
+    private fun ask(step: Step.Ask) {
+        toastText(step.question)
+        question = step
+        questionAt = SystemClock.uptimeMillis()
+        say(step.question) { if (question === step && !isFinishing) startListening() }
+    }
+
+    /** What was heard after a question: its answer, or (when it isn't one) a new request. */
+    private fun answer(asked: Step.Ask, text: String) {
+        voiceQuery = text
+        lifecycleScope.launch {
+            val step = asked.answer(text)
+            if (step == null) {
+                heard(text)
+            } else {
+                music.resume()
+                finishStep(step, null, null)
+            }
+        }
+    }
+
+    /**
+     * Offers a spoken request this assistant didn't understand to the user's Home Assistant, when
+     * set up; [otherwise] runs when it isn't, or doesn't understand it either.
+     */
+    private fun offerToHomeAssistant(text: String, otherwise: () -> Unit) {
+        if (!fastSearch.commands.hasHomeAssistant) {
+            otherwise()
+            return
+        }
+        lifecycleScope.launch {
+            when (val step = fastSearch.commands.tryHomeAssistant(text)) {
+                is Step.Done, is Step.Failed, is Step.Ask -> finishStep(step, null, null)
+                else -> otherwise()
             }
         }
     }
@@ -501,10 +614,10 @@ class AssistActivity : ComponentActivity(), SearchActions {
     private fun launchStep(step: Step.Launch, intents: List<Intent>, command: Command, contact: Contact?, bounds: ComposeRect?) {
         if (!startFirst(intents, bounds)) {
             toast(R.string.error_no_app)
-            say(getString(R.string.error_no_app))
+            say(fastSearch.localized.getString(R.string.error_no_app))
             return
         }
-        say(fastSearch.responder.forCommand(command, contact))
+        say(step.spoken ?: fastSearch.responder.forCommand(command, contact))
         step.then?.let { then -> fastSearch.appScope.launch { then() } }
         if (step.confirmation != null) {
             // Clock intents with EXTRA_SKIP_UI show nothing; confirm and close ourselves.
@@ -644,6 +757,19 @@ class AssistActivity : ComponentActivity(), SearchActions {
             music.resume()
             return
         }
+        val asked = question
+        question = null
+        if (asked != null && SystemClock.uptimeMillis() - questionAt < QUESTION_TIMEOUT_MS) {
+            voiceText = text
+            textState.setTextAndPlaceCursorAtEnd(text)
+            answer(asked, text)
+            return
+        }
+        heard(text)
+    }
+
+    /** Runs a spoken request. */
+    private fun heard(text: String) {
         voiceText = text
         textState.setTextAndPlaceCursorAtEnd(text)
         pendingSpoken = text
@@ -760,6 +886,9 @@ class AssistActivity : ComponentActivity(), SearchActions {
         private const val BLUR_RADIUS_DP = 28
         private const val MAX_PREFILL = 200
         private const val SPOKEN_TIMEOUT_MS = 4_000L
+
+        /** How long a question ("Which one?") waits for its answer. */
+        private const val QUESTION_TIMEOUT_MS = 30_000L
 
         /** How long "play ..." waits for the artist's Spotify page before using search instead. */
         private const val LOOKUP_TIMEOUT_MS = 3_000L

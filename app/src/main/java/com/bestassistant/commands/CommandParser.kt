@@ -1,5 +1,7 @@
 package com.bestassistant.commands
 
+import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Locale
 
@@ -13,24 +15,32 @@ import java.util.Locale
 object CommandParser {
 
     fun parse(input: String, now: LocalDateTime = LocalDateTime.now()): Command? {
-        // Greek requests have their own rules; an English sentence with a Greek name falls through.
-        if (GreekCommandParser.isGreek(input)) GreekCommandParser.parse(input, now)?.let { return it }
         val text = normalize(input)
         if (text.isEmpty() || text.length > MAX_LENGTH) return null
-        return conversion(text)
+        return youTube(text)
+            ?: reminder(text, now)
+            ?: parking(text)
+            ?: shareLocation(text)
+            ?: conversion(text)
             ?: timer(text)
             ?: alarm(text, now)
             ?: flashlight(text)
             ?: volume(text)
             ?: media(text)
+            ?: homeQuestion(text)
+            ?: deviceSetting(text)
             ?: music(text)
             ?: weather(text)
             ?: clock(text)
+            ?: nameDays(text, now)
             ?: camera(text)
             ?: navigate(text)
             ?: call(text)
             ?: message(text)
             ?: panel(text)
+            ?: task(text)
+            ?: smartHome(text)
+            ?: webSearch(text)
             ?: lookup(text)
             ?: openApp(text)
     }
@@ -160,6 +170,268 @@ object CommandParser {
             }
         }
         return null
+    }
+
+    // endregion
+
+    // region Reminders
+
+    private val reminderLead = Regex(
+        "^(?:remind me|set (?:a |me a |up a )?reminder|create (?:a )?reminder|add (?:a )?reminder|make (?:a )?reminder|" +
+            "new reminder|reminder|don't let me forget|do not let me forget)(?: (.+))?$",
+    )
+    private val showReminders = Regex(
+        "^(?:(?:show|list|read|check|open|see|tell me)(?: me)? |what are )?(?:all )?(?:my |the )?(?:upcoming )?reminders$|" +
+            "^(?:do i have any|any|what) reminders(?: do i have)?$",
+    )
+    private val cancelReminders = Regex("^(?:cancel|delete|remove|clear|turn off|stop)(?: all)?(?: of)?(?: my| the)? reminders?$")
+    private val weekdays = DayOfWeek.entries.associateBy { it.name.lowercase(Locale.ROOT) }
+    private val dayParts = mapOf("morning" to DayPart.MORNING, "afternoon" to DayPart.AFTERNOON, "evening" to DayPart.EVENING, "night" to DayPart.NIGHT)
+    private val partPhrases = listOf(
+        "in the morning" to DayPart.MORNING, "this morning" to DayPart.MORNING, "in the afternoon" to DayPart.AFTERNOON,
+        "this afternoon" to DayPart.AFTERNOON, "in the evening" to DayPart.EVENING, "this evening" to DayPart.EVENING,
+        "tonight" to DayPart.EVENING, "at night" to DayPart.NIGHT,
+    )
+    private val reminderFillers = setOf("to", "that", "about", "of", "for", "me", "and", "so", "on", "at")
+    private val manyDays = Regex("^(\\d+) (days?|weeks?)$")
+
+    private fun reminder(text: String, now: LocalDateTime): Command? {
+        if (showReminders.matches(text)) return Command.ShowReminders
+        if (cancelReminders.matches(text)) return Command.CancelReminders
+        val m = reminderLead.matchEntire(text) ?: return null
+        val words = words(m.groupValues[1]).toMutableList()
+        val time = reminderTime(words, now)
+        while (words.isNotEmpty() && words.first() in reminderFillers) words.removeAt(0)
+        while (words.isNotEmpty() && words.last() in setOf("to", "please", "and")) words.removeAt(words.lastIndex)
+        return Command.Remind(words.joinToString(" ").takeIf { it.isNotEmpty() }, time)
+    }
+
+    /** Finds and removes the words that say when ("in 20 minutes", "tomorrow at 9"), leaving what to remind of. */
+    private fun reminderTime(words: MutableList<String>, now: LocalDateTime): ReminderTime? {
+        val today = now.toLocalDate()
+        var part: DayPart? = null
+        var day: LocalDate? = null
+        for ((phrase, value) in partPhrases) {
+            if (words.cut(phrase) >= 0) {
+                part = value
+                if (phrase == "tonight") day = today
+                break
+            }
+        }
+        var after = relative(words)
+
+        val dayWords = listOf("the day after tomorrow" to 2L, "day after tomorrow" to 2L, "tomorrow" to 1L, "today" to 0L)
+        for ((phrase, offset) in dayWords) {
+            val at = words.cut(phrase)
+            if (at < 0) continue
+            day = today.plusDays(offset)
+            // "tomorrow morning"
+            words.getOrNull(at)?.let { dayParts[it] }?.let { part = it; words.removeAt(at) }
+            break
+        }
+        if (day == null) {
+            for (i in words.indices) {
+                val weekday = weekdays[words[i]] ?: continue
+                val before = words.getOrNull(i - 1)
+                day = ReminderTimes.next(today, weekday, thisWeek = before == "this")
+                words.removeAt(i)
+                words.getOrNull(i)?.let { dayParts[it] }?.let { part = it; words.removeAt(i) }
+                if (before in setOf("on", "this", "next")) words.removeAt(i - 1)
+                break
+            }
+        }
+
+        // "set a reminder for 10 minutes", before "for 10" can read as 10 o'clock.
+        if (after == null && words.firstOrNull() == "for") {
+            after = (words.size downTo 2).firstNotNullOfOrNull { end ->
+                Spoken.duration(words.subList(1, end).joinToString(" "))?.also { repeat(end) { words.removeAt(0) } }
+            }
+        }
+        val clock = if (after == null) clockIn(words) else null
+        return ReminderTimes.build(now, after, day, clock, part)
+    }
+
+    /** "in 20 minutes", "in an hour and a half", "20 minutes from now", "in 3 days": seconds from now. */
+    private fun relative(words: MutableList<String>): Int? {
+        for (i in words.indices) {
+            if (words[i] != "in") continue
+            for (end in minOf(words.size, i + 7) downTo i + 2) {
+                val span = words.subList(i + 1, end).joinToString(" ")
+                val seconds = Spoken.duration(span) ?: days(span) ?: continue
+                repeat(end - i) { words.removeAt(i) }
+                return seconds
+            }
+        }
+        val fromNow = words.cut("from now")
+        if (fromNow > 0) {
+            for (start in maxOf(0, fromNow - 6) until fromNow) {
+                val seconds = Spoken.duration(words.subList(start, fromNow).joinToString(" ")) ?: continue
+                repeat(fromNow - start) { words.removeAt(start) }
+                return seconds
+            }
+        }
+        return null
+    }
+
+    private fun days(span: String): Int? {
+        val m = manyDays.matchEntire(Spoken.digitize(span).replace(Regex("^an? "), "1 ")) ?: return null
+        val count = m.groupValues[1].toInt().takeIf { it in 1..MAX_REMINDER_DAYS } ?: return null
+        return count * (if (m.groupValues[2].startsWith("week")) 7 else 1) * SECONDS_PER_DAY
+    }
+
+    /**
+     * "at 5", "at 7:30 pm", "5pm", "for noon": the time of day, removed from [words]. "At" comes
+     * first, so "book a table for 4 at 8" is at 8.
+     */
+    private fun clockIn(words: MutableList<String>): Spoken.ClockTime? {
+        val passes = listOf(setOf("at", "by", "around"), null, setOf("for"))
+        for (prepositions in passes) {
+            for (i in words.indices) {
+                val preposition = prepositions != null
+                if (preposition && words[i] !in prepositions!!) continue
+                val start = if (preposition) i + 1 else i
+                for (end in minOf(words.size, start + 5) downTo start + 1) {
+                    val span = words.subList(start, end).joinToString(" ")
+                    // Without "at", only times that can't be anything else: "5pm", "17:30", "noon".
+                    if (!preposition && !explicitTime.containsMatchIn(span)) continue
+                    val time = Spoken.clock(span) ?: continue
+                    repeat(end - i) { words.removeAt(i) }
+                    return time
+                }
+            }
+        }
+        return null
+    }
+
+    private val explicitTime = Regex("\\d[:.]\\d|\\d ?[ap]\\.?m|^noon$|^midnight$|o'?clock")
+
+    /** Removes the words of [phrase] where they first appear, returning where that was, or -1. */
+    private fun MutableList<String>.cut(phrase: String): Int {
+        val parts = phrase.split(' ')
+        for (i in 0..size - parts.size) {
+            if (subList(i, i + parts.size) == parts) {
+                repeat(parts.size) { removeAt(i) }
+                return i
+            }
+        }
+        return -1
+    }
+
+    /**
+     * The answer to "When should I remind you?": "at 5", "in ten minutes", "tomorrow", or a bare
+     * "5 pm". Null when it doesn't say a time.
+     */
+    fun reminderTime(answer: String, now: LocalDateTime = LocalDateTime.now()): ReminderTime? {
+        val text = normalize(answer)
+        // A time alone first ("5", "5 pm"); then the way a whole request reads it ("tomorrow at 9").
+        Spoken.clock(text.removePrefix("at ").removePrefix("for "))?.let { return ReminderTimes.build(now, null, null, it, null) }
+        return (reminder("remind me $text", now) as? Command.Remind)?.time
+    }
+
+    /** "Remind me" said alone, then what it's about: the whole request again, with the answer in it. */
+    fun reminderAbout(answer: String, now: LocalDateTime = LocalDateTime.now()): Command.Remind {
+        return reminder("remind me ${normalize(answer)}", now) as? Command.Remind ?: Command.Remind(answer.trim(), null)
+    }
+
+    // endregion
+
+    // region YouTube, name days, parking, location
+
+    private val youTubeName = "(?:youtube|you tube)"
+    private val youTubeLead = Regex("^(?:search|look up|look for|find)(?: on| in)? $youTubeName(?: for)?(?: (.+))?$")
+    private val youTubeFirst = Regex("^$youTubeName (?:search|search for|look up|find)(?: for)? (.+)$")
+    private val onYouTube = Regex(
+        "^(?:search for|search|look up|look for|find|show me|watch|i want to watch|let me watch|open|find me)(?: me)? (.+?) (?:on|in) $youTubeName$",
+    )
+    private val youTubeVideos = Regex("^(?:show me |find |search for |find me )?(?:a |some )?youtube videos? (?:of|about|on|for|with) (.+)$")
+
+    private fun youTube(text: String): Command? {
+        youTubeLead.matchEntire(text)?.let { m ->
+            val query = m.groupValues[1].trim()
+            // "search youtube music for ..." is the music app.
+            if (query.startsWith("music")) return null
+            return if (query.isEmpty()) Command.OpenApp("YouTube") else Command.YouTubeSearch(query)
+        }
+        val query = youTubeFirst.matchEntire(text)?.groupValues?.get(1)
+            ?: onYouTube.matchEntire(text)?.groupValues?.get(1)
+            ?: youTubeVideos.matchEntire(text)?.groupValues?.get(1)
+            ?: return null
+        return query.trim().takeIf { it.isNotEmpty() }?.let(Command::YouTubeSearch)
+    }
+
+    private val nameDaysLead = Regex(
+        "^(?:who|who's|who is|whose|who all) (?:is )?(?:celebrating|celebrates|celebrate|has (?:a |their )?name ?day|" +
+            "have (?:a |their )?name ?days?|name ?days? (?:is|are) it|name ?day is it)(?: (today|tomorrow|yesterday))?$",
+    )
+    private val nameDaysList = Regex(
+        "^(?:what are |what's |what is |show me |tell me |list |read )?(?:the )?(?:(today|tomorrow|yesterday)'s )?(?:greek )?" +
+            "name ?days?(?: (?:for |of )?(today|tomorrow|yesterday))?$",
+    )
+    private val whoseNameDay = Regex("^whose name ?day is (?:it )?(today|tomorrow|yesterday)$")
+    private val nameDayOf = listOf(
+        Regex("^when(?: is|'s) (?:the )?name ?day (?:of|for) (.+)$"),
+        Regex("^when(?: is|'s) (.+?)(?:'s|s'|') name ?day$"),
+        Regex("^when(?: is|'s) (.+?) name ?day$"),
+        Regex("^when does (.+?) (?:celebrate|have (?:a |their |his |her )?name ?day)(?: (?:their|his|her) name ?day)?$"),
+        Regex("^(?:the )?name ?day (?:of|for) (.+)$"),
+        Regex("^(.+?)(?:'s)? name ?day$"),
+    )
+    private val notNames = setOf(
+        "my", "your", "his", "her", "their", "the", "today", "tomorrow", "yesterday", "greek", "a", "today's", "tomorrow's", "happy",
+    )
+
+    private fun nameDays(text: String, now: LocalDateTime): Command? {
+        val day = (nameDaysLead.matchEntire(text) ?: whoseNameDay.matchEntire(text))?.groupValues?.get(1)
+            ?: nameDaysList.matchEntire(text)?.let { m -> m.groupValues[1].ifEmpty { m.groupValues[2] } }
+        if (day != null) {
+            val offset = when (day) {
+                "tomorrow" -> 1L
+                "yesterday" -> -1L
+                else -> 0L
+            }
+            return Command.NameDays(now.toLocalDate().plusDays(offset))
+        }
+        val name = nameDayOf.firstNotNullOfOrNull { it.matchEntire(text)?.groupValues?.get(1) }?.trim() ?: return null
+        if (name.isEmpty() || name in notNames || words(name).size > 3) return null
+        return Command.NameDay(name.split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.titlecase(Locale.ROOT) } })
+    }
+
+    private val saveParking = setOf(
+        "remember where i parked", "remember where i parked my car", "remember where i parked the car", "remember where i've parked",
+        "remember where my car is", "remember my parking spot", "remember my parking space", "remember my parking location",
+        "remember this parking spot", "remember where the car is", "save my parking spot", "save my parking space",
+        "save my parking location", "save parking spot", "save parking location", "save my parking", "save where i parked",
+        "mark my parking spot", "note where i parked", "i parked here", "i've parked here", "i have parked here", "i just parked",
+        "i just parked here", "my car is parked here", "i parked my car here", "i parked the car here",
+    )
+    private val findCarDirections = Regex(
+        "^(?:(?:take|bring|walk|lead|guide|navigate|get|direct)(?: me)?(?: back)? to|(?:directions|navigation|route) (?:back )?to|" +
+            "how do i get (?:back )?to) (?:my|the) (?:car|parked car|parking spot|parking space)$",
+    )
+    private val findCarMap = setOf(
+        "where did i park", "where did i park my car", "where did i park the car", "where is my car", "where's my car",
+        "where is the car", "where's the car", "find my car", "where did i leave my car", "where did i leave the car",
+        "where is my car parked", "show me my car", "show me where i parked", "where am i parked", "where's my parking spot",
+        "where is my parking spot", "where did i leave the car parked",
+    )
+
+    private fun parking(text: String): Command? = when {
+        text in saveParking -> Command.SaveParking
+        findCarDirections.matches(text) -> Command.FindCar(directions = true)
+        text in findCarMap -> Command.FindCar(directions = false)
+        else -> null
+    }
+
+    private val myLocation = "(?:my (?:current |exact )?(?:location|position|whereabouts)|where i am|where i'm at|where i'm)"
+    private val locationTo = Regex("^(?:send|share|text|message|sms|give)(?: my)? (?:current )?(?:location|position|whereabouts|where i am) (?:to|with) (.+)$")
+    private val personLocation = Regex("^(?:send|text|message|sms|tell|show|give) (.+?) $myLocation$")
+    private val myLocationTo = Regex("^(?:send|share|text) $myLocation (?:to|with) (.+)$")
+
+    private fun shareLocation(text: String): Command? {
+        val who = (locationTo.matchEntire(text) ?: personLocation.matchEntire(text) ?: myLocationTo.matchEntire(text))
+            ?.groupValues?.get(1)?.trim() ?: return null
+        if (who.isEmpty() || who in setOf("me", "myself", "it", "us")) return null
+        return Command.ShareLocation(who.removePrefix("to ").trim())
     }
 
     // endregion
@@ -454,23 +726,65 @@ object CommandParser {
     }
 
     private val navigation = Regex(
-        "^(?:navigate|navigation|directions|get directions|give me directions|show me directions|route)" +
+        "^(?:navigate|navigation|directions|get directions|give me directions|show me directions|route|start navigation|start navigating)" +
             "(?: me)?(?: to| for)? (.+)$",
     )
     // "drive" and "walk" alone are too ambiguous ("drive files"); they need a "to".
-    private val travelTo = Regex("^(?:drive|walk|cycle|take me|bring me|how do i get|how to get|how can i get|get me) (?:me )?to (.+)$")
+    private val travelTo = Regex("^(?:drive|walk|cycle|take me|bring me|how do i get|how to get|how can i get|get me|head|let's go|lets go) (?:me )?to (.+)$")
     private val mapQuery = Regex("^(?:show |find )?(?:me )?(.+?) on (?:the |a )?maps?$")
     private val mapOf = Regex("^(?:show me |open )?(?:a )?map of (.+)$")
 
+    /** "take me home", "drive to work", "go home": a saved place needs no "to" ("drive home"). */
+    private val placeTrip = Regex(
+        "^(?:navigate|navigation|directions|get directions|give me directions|route|take me|bring me|get me|drive|walk|cycle|" +
+            "go|head|let's go|lets go|how do i get|how to get|how can i get|i want to go|start navigation)(?: me)?(?: back)?(?: to| for)? (.+)$",
+    )
+    private val savedPlaces = mapOf(
+        "home" to SavedPlace.HOME, "my home" to SavedPlace.HOME, "my house" to SavedPlace.HOME, "my place" to SavedPlace.HOME,
+        "the house" to SavedPlace.HOME,
+        "work" to SavedPlace.WORK, "my work" to SavedPlace.WORK, "the office" to SavedPlace.WORK, "my office" to SavedPlace.WORK,
+        "office" to SavedPlace.WORK, "my job" to SavedPlace.WORK, "my workplace" to SavedPlace.WORK,
+    )
+
+    /** "... with waze", "... on google maps": the navigation app the user asked for. */
+    private val withNavigationApp: Regex by lazy {
+        Regex("^(.+?) (?:on|in|with|using|via|through) (${NavigationApp.allAliases.joinToString("|") { Regex.escape(it) }})(?: app)?$")
+    }
+
+    /** "waze home", "waze to the airport" ("ways to save money" stays a search). */
+    private val appFirst = Regex("^waze (?:me )?(?:to )?(.+)$")
+
     private fun navigate(text: String): Command? {
-        val destination = navigation.matchEntire(text)?.groupValues?.get(1)
-            ?: travelTo.matchEntire(text)?.groupValues?.get(1)
-            ?: mapQuery.matchEntire(text)?.groupValues?.get(1)
-            ?: mapOf.matchEntire(text)?.groupValues?.get(1)
+        var request = text
+        var app: NavigationApp? = null
+        withNavigationApp.matchEntire(text)?.let { m ->
+            request = m.groupValues[1].trim()
+            app = NavigationApp.fromName(m.groupValues[2])
+        }
+        if (app == null) {
+            appFirst.matchEntire(request)?.let { m ->
+                app = NavigationApp.WAZE
+                request = "navigate to " + m.groupValues[1].trim()
+            }
+        }
+        placeTrip.matchEntire(request)?.let { m ->
+            val name = m.groupValues[1].trim()
+            savedPlaces[name]?.let { place -> return Command.Navigate(placeName(place), place, app) }
+        }
+        val map = mapQuery.matchEntire(request) ?: mapOf.matchEntire(request)
+        val destination = navigation.matchEntire(request)?.groupValues?.get(1)
+            ?: travelTo.matchEntire(request)?.groupValues?.get(1)
+            ?: map?.groupValues?.get(1)
             ?: return null
         val cleaned = destination.removePrefix("to ").removePrefix("the ").trim()
         if (cleaned.isEmpty() || cleaned in setOf("my phone", "my car keys")) return null
-        return Command.Navigate(cleaned)
+        savedPlaces[cleaned]?.let { return Command.Navigate(placeName(it), it, app) }
+        return Command.Navigate(cleaned, app = app, map = map != null && app == null)
+    }
+
+    private fun placeName(place: SavedPlace) = when (place) {
+        SavedPlace.HOME -> "home"
+        SavedPlace.WORK -> "work"
     }
 
     private val callPattern = Regex("^(?:call|phone|ring|dial|facetime|video call)(?: up)? (.+?)(?: (?:on|at) (?:their |his |her )?(?:mobile|cell|work|home|phone))?$")
@@ -570,6 +884,109 @@ object CommandParser {
         return Command.Lookup(cleaned)
     }
 
+    // Longest first: "search the web for x" isn't a search for "the web for x".
+    private val searchLeads = listOf(
+        "search on the internet for", "search the internet for", "search duckduckgo for", "search on google for",
+        "search the web for", "google search for", "search online for", "search google for", "search bing for",
+        "look online for", "web search for", "search the web", "look up online", "google search", "search online",
+        "find online", "web search", "search for", "search", "google",
+    )
+    private val searchPattern = Regex("^(?:${searchLeads.joinToString("|")})(?: for)? (.+)$")
+    private val searchOnWeb = Regex("^(.+?) (?:on the web|on the internet|online|on google)$")
+    private val findOnWeb = Regex("^(?:search for|look up|look for|search|find|google) (.+?) (?:on the web|on the internet|online|on google)$")
+
+    /** "google maps", "google photos": the user is looking for the app, not searching Google. */
+    private val googleApps = setOf(
+        "maps", "photos", "drive", "play", "play store", "chrome", "calendar", "keep", "translate", "lens", "news", "home",
+        "assistant", "pay", "wallet", "fit", "meet", "docs", "sheets", "slides", "earth", "tv", "files", "messages",
+        "contacts", "phone", "clock", "calculator", "camera", "gemini", "one", "authenticator", "podcasts", "music",
+        "app", "settings", "account", "voice", "duo", "chat", "gmail",
+    )
+
+    private fun webSearch(text: String): Command? {
+        // "look up pizza places online"
+        findOnWeb.matchEntire(text)?.let { return Command.WebSearch(it.groupValues[1].trim()) }
+        val m = searchPattern.matchEntire(text) ?: return null
+        val query = m.groupValues[1].trim()
+        // "search wikipedia for ..." is the Wikipedia lookup's.
+        if (query.startsWith("wikipedia") || query.startsWith("wiki ")) return null
+        if (text.startsWith("google ") && !text.startsWith("google search") && query in googleApps) return null
+        // "search for x on the web" says the same thing twice.
+        val cleaned = searchOnWeb.matchEntire(query)?.groupValues?.get(1)?.trim() ?: query
+        return cleaned.takeIf { it.isNotEmpty() }?.let(Command::WebSearch)
+    }
+
+    private val taskPattern = Regex("^(?:run|start|launch|trigger|execute|perform|fire|do)(?: the| my)?(?: tasker)? task(?: called| named)? (.+)$")
+    private val namedTask = Regex("^(?:run|start|launch|trigger|execute|perform|fire)(?: the| my)? (.+?)(?: tasker)? task$")
+    private val taskInTasker = Regex("^(?:run|start|launch|trigger|execute|perform|fire)(?: the| my)? (.+?) (?:in|on|with|using|through) tasker$")
+    private val taskerFirst = Regex("^tasker(?: run| task| start)* (.+)$")
+
+    private fun task(text: String): Command? {
+        val name = taskPattern.matchEntire(text)?.groupValues?.get(1)
+            ?: namedTask.matchEntire(text)?.groupValues?.get(1)
+            ?: taskInTasker.matchEntire(text)?.groupValues?.get(1)
+            ?: taskerFirst.matchEntire(text)?.groupValues?.get(1)
+            ?: return null
+        val cleaned = name.removePrefix("task ").removeSuffix(" task").trim()
+        return cleaned.takeIf { it.isNotEmpty() && it != "tasker" }?.let(Command::RunTask)
+    }
+
+    /** "ask home assistant to ...", "... in home assistant": whatever follows is for Home Assistant. */
+    private val toHomeAssistant = Regex("^(?:ask |tell |hey )?(?:home assistant|homeassistant|home-assistant)(?: to| please)? (.+)$")
+    private val inHomeAssistant = Regex("^(.+?) (?:in|on|with|using|via|through) (?:home assistant|homeassistant)$")
+
+    /** Device control that Home Assistant's Assist understands; the phone's own switches are matched before this. */
+    private val switchDevice = Regex("^(?:turn|switch|power) (?:on|off) (?:the |my |all |all the )?(.+)$")
+    private val switchDeviceAfter = Regex("^(?:turn|switch|power) (?:the |my |all |all the )?(.+?) (?:on|off)$")
+    private val dimDevice = Regex("^(?:dim|brighten|lock|unlock)(?: the| my| all| all the)? (.+)$")
+    private val setDevice = Regex("^(?:set|turn|put|change) (?:the |my )?(.+?) (?:to|at) (\\d{1,3})(?: ?%| percent| degrees?)?$")
+    private val scene = Regex("^(?:activate|run|start|turn on|set|enable)(?: the| my)? (.+?) (?:scene|mode)$")
+    private val openCover = Regex("^(?:open|close|raise|lower|shut)(?: the| my| all the| all)? (.+)$")
+    private val coverWords = setOf(
+        "garage", "blinds", "blind", "curtains", "curtain", "shades", "shade", "shutters", "shutter", "gate", "awning",
+        "door", "garage door", "front door", "back door", "valve", "window", "windows", "roller", "rollers",
+    )
+    private val notDevices = setOf(
+        "it", "this", "that", "everything", "something", "music", "media", "sound", "phone", "screen", "volume", "the volume",
+        "alarm", "the alarm", "timer", "the timer", "song", "the song", "brightness", "the brightness", "screen brightness",
+        // The phone's own modes, which only its settings can change.
+        "dark", "light", "airplane", "aeroplane", "flight", "silent", "vibrate", "focus", "driving", "battery saver",
+        "power saving", "low power", "reading",
+    )
+
+    /** "Is the front door locked?", "what's the temperature in the bedroom?" before the weather takes it. */
+    private fun homeQuestion(text: String): Command? = HomeQuestions.parse(text)?.let { Command.SmartHome(text, query = it) }
+
+    /** "Put the AC on cool" before music takes "put ... on" as a song. */
+    private fun deviceSetting(text: String): Command? {
+        val setting = HomeSettings.parse(text) ?: return null
+        if (setting.value.let { it is SettingValue.Word && it.text in setOf("on", "off") }) return null
+        return smartHome(text)
+    }
+
+    private fun smartHome(text: String): Command? {
+        (toHomeAssistant.matchEntire(text) ?: inHomeAssistant.matchEntire(text))?.let { m ->
+            val request = m.groupValues[1].trim()
+            HomeQuestions.parse(request)?.let { return Command.SmartHome(request, query = it) }
+            val group = HomeGroups.parse(request)
+            return Command.SmartHome(request, group, if (group == null) HomeSettings.parse(request, strict = false) else null)
+        }
+        HomeGroups.parse(text)?.let { return Command.SmartHome(text, it) }
+        HomeSettings.parse(text)?.let { setting ->
+            // "Arm the alarm" is the house's alarm; "set the alarm to ..." the phone's.
+            if (setting.value is SettingValue.Action || setting.target.trim() !in notDevices) return Command.SmartHome(text, setting = setting)
+        }
+        val device = switchDevice.matchEntire(text)?.groupValues?.get(1)
+            ?: switchDeviceAfter.matchEntire(text)?.groupValues?.get(1)
+            ?: dimDevice.matchEntire(text)?.groupValues?.get(1)
+            ?: setDevice.matchEntire(text)?.groupValues?.get(1)
+            ?: scene.matchEntire(text)?.groupValues?.get(1)
+            ?: openCover.matchEntire(text)?.groupValues?.get(1)?.takeIf { rest -> words(rest).any { it in coverWords } }
+            ?: return null
+        if (device.trim() in notDevices) return null
+        return Command.SmartHome(text)
+    }
+
     private val openPattern = Regex("^(?:open|launch|start|run|go to|show me) (?:up )?(?:the |my )?(.+?)(?: app| application)?$")
 
     private fun openApp(text: String): Command? {
@@ -585,4 +1002,6 @@ object CommandParser {
 
     private const val MAX_LENGTH = 160
     private const val MAX_TIMER_SECONDS = 24 * 3600
+    private const val SECONDS_PER_DAY = 24 * 3600
+    private const val MAX_REMINDER_DAYS = 365
 }

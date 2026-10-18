@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Hearing
+import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.IconButton
@@ -336,6 +337,9 @@ private fun SettingsScreen(
                                     },
                                 ),
                             ) { page = SettingsPage.SPOTIFY }
+                            PageRow(Icons.Rounded.Hub, R.string.page_connections, stringResource(R.string.summary_connections)) {
+                                page = SettingsPage.CONNECTIONS
+                            }
                             PageRow(
                                 Icons.Rounded.Hearing,
                                 R.string.section_wake,
@@ -352,7 +356,7 @@ private fun SettingsScreen(
                             PageRow(Icons.Rounded.RecordVoiceOver, R.string.section_voice, stringResource(settings.voiceStyle.label)) {
                                 page = SettingsPage.VOICE
                             }
-                            PageRow(Icons.Rounded.Assistant, R.string.section_assistant_settings, stringResource(settings.language.label)) {
+                            PageRow(Icons.Rounded.Assistant, R.string.section_assistant_settings, stringResource(R.string.summary_assistant_settings)) {
                                 page = SettingsPage.ASSISTANT
                             }
                             PageRow(Icons.Rounded.Search, R.string.section_search_settings, stringResource(settings.engine.label)) {
@@ -448,6 +452,15 @@ private fun SettingsScreen(
                     item { Group { PlaylistSection() } }
                 }
 
+                SettingsPage.CONNECTIONS -> {
+                    item { SectionTitle(R.string.section_navigation) }
+                    item { Group { NavigationSection(settings, update) } }
+                    item { SectionTitle(R.string.section_home_assistant) }
+                    item { Group { HomeAssistantSection(settings, update) } }
+                    item { SectionTitle(R.string.section_tasker) }
+                    item { Group { TaskerSection() } }
+                }
+
                 SettingsPage.WAKE -> item {
                     Group {
                         WakeSection(
@@ -473,14 +486,6 @@ private fun SettingsScreen(
 
                 SettingsPage.ASSISTANT -> item {
                     Group {
-                        LanguagePicker(settings.language) { language ->
-                            if (language != settings.language) {
-                                update { it.copy(language = language) }
-                                context.fastSearch.applyLanguage()
-                                // The page survives the recreate: it's saved state.
-                                (context as Activity).recreate()
-                            }
-                        }
                         SwitchRow(Icons.Rounded.GraphicEq, R.string.pref_listen_title, R.string.pref_listen_body, settings.listenOnOpen) { on ->
                             update { it.copy(listenOnOpen = on) }
                             if (on && !micGranted) micLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -668,6 +673,7 @@ private enum class SettingsPage(@param:StringRes val title: Int) {
     HOME(R.string.app_name),
     PERMISSIONS(R.string.page_permissions),
     SPOTIFY(R.string.page_spotify),
+    CONNECTIONS(R.string.page_connections),
     WAKE(R.string.section_wake),
     VOICE(R.string.section_voice),
     ASSISTANT(R.string.section_assistant_settings),

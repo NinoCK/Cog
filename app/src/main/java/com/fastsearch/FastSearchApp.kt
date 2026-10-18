@@ -3,12 +3,16 @@ package com.fastsearch
 import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
+import com.bestassistant.automation.HomeAssistant
+import com.bestassistant.automation.Tasker
 import com.bestassistant.device.CommandRunner
 import com.bestassistant.language.AppLanguage
 import com.bestassistant.media.MediaControl
 import com.bestassistant.media.SavedPlaylists
 import com.bestassistant.media.SpotifyCatalog
 import com.bestassistant.media.SpotifyRemote
+import com.bestassistant.parking.Parking
+import com.bestassistant.reminders.Reminders
 import com.bestassistant.speech.Responder
 import com.bestassistant.speech.Speaker
 import com.bestassistant.wake.WakeModel
@@ -56,6 +60,14 @@ class FastSearchApp : Application() {
         private set
     lateinit var wakeModel: WakeModel
         private set
+    lateinit var tasker: Tasker
+        private set
+    lateinit var homeAssistant: HomeAssistant
+        private set
+    lateinit var reminders: Reminders
+        private set
+    lateinit var parking: Parking
+        private set
 
     /** This app's resources in the assistant's language, for replies spoken after the overlay closes. */
     lateinit var localized: Context
@@ -71,7 +83,15 @@ class FastSearchApp : Application() {
         media = MediaControl(this)
         playlists = SavedPlaylists(this)
         spotify = SpotifyRemote(this) { preferences.settings.value.spotifyClientId }
-        commands = CommandRunner(this, { localized }, media, SpotifyCatalog(this), playlists, spotify)
+        tasker = Tasker(this)
+        homeAssistant = HomeAssistant({ preferences.settings.value.homeAssistantUrl }, { preferences.settings.value.homeAssistantToken })
+        reminders = Reminders(this)
+        parking = Parking(this)
+        commands = CommandRunner(
+            this, { localized }, media, SpotifyCatalog(this), playlists, spotify,
+            settings = { preferences.settings.value }, tasker = tasker, home = homeAssistant,
+            location = location, reminders = reminders, parking = parking,
+        )
         speaker = Speaker(this, preferences)
         responder = Responder({ localized }, media)
         wakeModel = WakeModel(this, appScope)
@@ -80,15 +100,15 @@ class FastSearchApp : Application() {
         apps.refresh()
     }
 
-    /** Applies the language setting to formatting and resources; screens call recreate() after. */
+    /** Applies English to formatting and resources. */
     fun applyLanguage() {
-        AppLanguage.apply(preferences.settings.value.language)
+        AppLanguage.apply()
         localized = AppLanguage.wrap(this)
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        // Android resets the default locale here; the phone's language may also have changed.
+        // Android resets the default locale here; the phone's region may also have changed.
         applyLanguage()
     }
 }

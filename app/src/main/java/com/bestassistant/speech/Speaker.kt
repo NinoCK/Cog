@@ -7,6 +7,8 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
@@ -26,6 +28,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -69,6 +72,12 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
     @Volatile
     private var ready = false
     private var pending: String? = null
+    private var pendingThen: (() -> Unit)? = null
+
+    /** The reply the engine is playing itself, and what to do once it has been said. */
+    @Volatile
+    private var afterReply: Pair<String, () -> Unit>? = null
+    private val main = Handler(Looper.getMainLooper())
     private val counter = AtomicInteger()
     private var job: Job? = null
 
@@ -89,12 +98,20 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         .setAudioAttributes(attributes)
         .build()
 
-    /** Says [text], interrupting whatever was being said. */
-    fun speak(text: String) {
-        if (text.isBlank()) return
+    /**
+     * Says [text], interrupting whatever was being said. [then] runs on the main thread once it
+     * has been said (or couldn't be), so a question can be followed by listening for the answer;
+     * it doesn't run if something else interrupts it.
+     */
+    fun speak(text: String, then: (() -> Unit)? = null) {
+        if (text.isBlank()) {
+            if (then != null) main.post(then)
+            return
+        }
         val engine = tts ?: start()
         if (!ready) {
             pending = text // spoken as soon as the engine is up
+            pendingThen = then
             return
         }
         stopPlayback()
@@ -103,10 +120,13 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         job = scope.launch {
             var handedOff = false
             try {
-                handedOff = say(engine, text, settings.voiceStyle, settings.voiceGender == VoiceGender.MALE, settings.systemVoice)
+                handedOff = say(engine, text, settings.voiceStyle, settings.voiceGender == VoiceGender.MALE, settings.systemVoice, then)
             } finally {
                 // The engine's own playback gives the focus back when it finishes (onDone).
-                if (!handedOff) audio.abandonAudioFocusRequest(focus)
+                if (!handedOff) {
+                    audio.abandonAudioFocusRequest(focus)
+                    if (then != null && isActive) main.post(then)
+                }
             }
         }
     }
@@ -122,6 +142,7 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
 
     fun stop() {
         pending = null
+        pendingThen = null
         stopPlayback()
         audio.abandonAudioFocusRequest(focus)
     }
@@ -178,6 +199,7 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
     }
 
     private fun stopPlayback() {
+        afterReply = null
         job?.cancel()
         job = null
         track?.let { runCatching { it.pause(); it.flush() } }
@@ -187,7 +209,7 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
     // region Choosing and shaping the voice
 
     /** Speaks [text]; true when the engine plays it directly (and will release the audio focus). */
-    private suspend fun say(engine: TextToSpeech, text: String, style: VoiceStyle, male: Boolean, chosen: String?): Boolean {
+    private suspend fun say(engine: TextToSpeech, text: String, style: VoiceStyle, male: Boolean, chosen: String?, then: (() -> Unit)?): Boolean {
         val voice = pickVoice(engine, style, male, chosen)
         val shift = Pitch.shiftFor(voice?.let { pitchOf(engine, it) }, male)
         val pitch = style.pitch * shift.pitch
@@ -196,7 +218,9 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         if (effect == null && !shift.changesSound) {
             engineLock.withLock {
                 apply(engine, voice, pitch, rate)
-                engine.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle(), "reply-${counter.getAndIncrement()}")
+                val id = "reply-${counter.getAndIncrement()}"
+                afterReply = then?.let { id to it }
+                engine.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle(), id)
             }
             return true
         }
@@ -361,9 +385,11 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
             }
             ready = true
             val queued = pending
+            val then = pendingThen
             pending = null
+            pendingThen = null
             if (queued != null) {
-                speak(queued)
+                speak(queued, then)
             } else {
                 // Measure the voice ahead of the first reply, so that reply isn't delayed by it.
                 val settings = preferences.settings.value
@@ -378,13 +404,13 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
             override fun onStart(utteranceId: String?) = Unit
             override fun onDone(utteranceId: String?) {
                 val synthesis = utteranceId?.let(synthesized::get)
-                if (synthesis != null) synthesis.complete(true) else audio.abandonAudioFocusRequest(focus)
+                if (synthesis != null) synthesis.complete(true) else finishedReply(utteranceId)
             }
 
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
                 val synthesis = utteranceId?.let(synthesized::get)
-                if (synthesis != null) synthesis.complete(false) else audio.abandonAudioFocusRequest(focus)
+                if (synthesis != null) synthesis.complete(false) else finishedReply(utteranceId)
             }
 
             override fun onStop(utteranceId: String?, interrupted: Boolean) {
@@ -393,6 +419,14 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         })
         tts = engine
         return engine
+    }
+
+    private fun finishedReply(utteranceId: String?) {
+        audio.abandonAudioFocusRequest(focus)
+        val after = afterReply ?: return
+        if (after.first != utteranceId) return
+        afterReply = null
+        main.post(after.second)
     }
 
     /** Voices that are on the phone: network voices would send every reply to a server. */

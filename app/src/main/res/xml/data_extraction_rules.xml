@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cloud backups and device transfers skip the Home Assistant token and where the car is parked. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="secrets.xml" />
+        <exclude domain="sharedpref" path="parking.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="secrets.xml" />
+        <exclude domain="sharedpref" path="parking.xml" />
+    </device-transfer>
+</data-extraction-rules>
