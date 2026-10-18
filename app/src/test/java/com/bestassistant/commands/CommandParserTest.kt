@@ -11,6 +11,13 @@ import com.bestassistant.integrations.homeassistant.HomeRequests
 import com.bestassistant.integrations.homeassistant.HomeSettings
 import com.bestassistant.integrations.homeassistant.NumberUnit
 import com.bestassistant.integrations.homeassistant.SettingValue
+import com.bestassistant.integrations.jellyfin.ControlRequest
+import com.bestassistant.integrations.jellyfin.JellyfinIntegration
+import com.bestassistant.integrations.jellyfin.JellyfinRequests
+import com.bestassistant.integrations.jellyfin.Library
+import com.bestassistant.integrations.jellyfin.PlayRequest
+import com.bestassistant.integrations.jellyfin.SeekRequest
+import com.bestassistant.integrations.jellyfin.SubtitleRequest
 import com.bestassistant.integrations.tasker.TaskRequest
 import com.bestassistant.integrations.tasker.TaskRequests
 import com.bestassistant.integrations.tasker.TaskerIntegration
@@ -357,6 +364,39 @@ class CommandParserTest {
         assertEquals(Command.OpenApp("task called lights out"), parse("run the task called lights out"))
         assertEquals(null, parse("tasker good night"))
         assertTrue(parse("start the lights out task") !is Command.Integration)
+    }
+
+    /** With Tasker and Jellyfin installed too, in the app's order, and a library with one movie Cog knows by name. */
+    private fun installJellyfin() {
+        val library = Library().apply { set(listOf("Inception")) }
+        CommandParser.integrations = listOf(
+            CommandParser.Installed(TaskerIntegration.ID, TaskRequests),
+            CommandParser.Installed(JellyfinIntegration.ID, JellyfinRequests({ true }, library)),
+        ) + CommandParser.integrations
+    }
+
+    private fun jellyfin(text: String) = (parse(text) as? Command.Integration)?.takeIf { it.integration == JellyfinIntegration.ID }?.request
+
+    @Test
+    fun jellyfin() {
+        installJellyfin()
+        assertTrue(jellyfin("play inception") is PlayRequest)
+        assertTrue(jellyfin("watch the matrix") is PlayRequest)
+        assertTrue(jellyfin("play season 2 episode 3 of the office on the bedroom tv") is PlayRequest)
+        assertTrue(jellyfin("pause the movie") is ControlRequest)
+        assertTrue(jellyfin("pause the movie on the tv") is ControlRequest)
+        assertTrue(jellyfin("skip ahead 30 seconds") is SeekRequest)
+        assertTrue(jellyfin("turn on subtitles") is SubtitleRequest)
+        // The phone's own controls, music, Home Assistant and Tasker keep theirs.
+        assertEquals(Command.Media(MediaAction.PAUSE), parse("pause"))
+        assertEquals(Command.Media(MediaAction.PLAY), parse("resume"))
+        assertTrue(parse("play thriller") is Command.PlayMusic)
+        assertTrue(parse("play inception on spotify") is Command.PlayMusic)
+        assertTrue(parse("continue") !is Command.Integration)
+        assertTrue(jellyfin("watch netflix") == null)
+        assertEquals(HomeAssistantIntegration.ID, (parse("turn off all the lights") as? Command.Integration)?.integration)
+        assertEquals(HomeAssistantIntegration.ID, (parse("pause the tv") as? Command.Integration)?.integration)
+        assertEquals(task("lights out"), parse("start the lights out task"))
     }
 
     @Test

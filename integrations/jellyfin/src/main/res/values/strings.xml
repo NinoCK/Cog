@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="jf_name">Jellyfin</string>
+    <string name="jf_description">Play movies, shows and music from your Jellyfin server, and control them by voice.</string>
+    <string name="jf_summary_set_up">Signed in as %1$s</string>
+    <string name="jf_summary_not_set_up">Not set up</string>
+    <string name="jf_card_not_set_up">Jellyfin isn\'t set up</string>
+
+    <!-- Settings -->
+    <string name="jf_intro">Cog signs in to your Jellyfin server as you, finds what you ask for in your library and plays it on a Jellyfin player you have open: the TV app, a browser, Kodi. Nothing goes through anyone else\'s server.</string>
+    <string name="jf_url">Server address</string>
+    <string name="jf_url_hint">http://192.168.1.10:8096</string>
+    <string name="jf_user">User name</string>
+    <string name="jf_password">Password</string>
+    <string name="jf_test">Sign in</string>
+    <string name="jf_status_checking">Signing in…</string>
+    <string name="jf_status_not_set">Enter your server\'s address and your user name, then sign in.</string>
+    <string name="jf_status_ok">Signed in as %1$s.</string>
+    <plurals name="jf_status_titles">
+        <item quantity="one">%d movie or show in your library.</item>
+        <item quantity="other">%d movies and shows in your library.</item>
+    </plurals>
+    <string name="jf_status_no_players">No player is open right now: open Jellyfin on your TV to play on it.</string>
+    <string name="jf_status_players">Players open now: %1$s.</string>
+    <string name="jf_players">Players</string>
+    <string name="jf_players_note">Say where to play (“on the bedroom TV”) or Cog plays on the player already playing, the only one open, or the one named here.</string>
+    <string name="jf_default_player">Usual player</string>
+    <string name="jf_default_player_hint">Living Room TV</string>
+    <string name="jf_phone_note">Say “on my phone” to watch here: in Jellyfin, if it\'s open on this phone, otherwise in a video player.</string>
+    <string name="jf_examples">What to say</string>
+    <string name="jf_examples_text">“Play Inception” · “Watch Breaking Bad” · “Play season 2 episode 3 of The Office on the bedroom TV” · “Play the next episode” · “Continue watching” · “Put on a random comedy” · “Pause the movie” · “Skip ahead 30 seconds” · “Go back 10 seconds” · “Jump to 1 hour 20 minutes” · “Turn on Greek subtitles” · “Switch the audio to English” · “Set the Jellyfin volume to 30” · “What am I watching?” · “How much is left?” · “What’s new on Jellyfin?” · “What should I watch?” · “Mark this as watched” · “Play Abbey Road on Jellyfin”</string>
+
+    <!-- Playing -->
+    <string name="jf_playing">Playing %1$s on %2$s.</string>
+    <string name="jf_resuming">Resuming %1$s on %2$s, from %3$s in.</string>
+    <string name="jf_shuffling">Shuffling %1$s on %2$s.</string>
+    <string name="jf_playing_phone">Playing %1$s here.</string>
+    <string name="jf_which_title">Which one? %1$s.</string>
+    <string name="jf_not_one_of_them">That isn\'t one of them.</string>
+    <string name="jf_which_player">Where should I play %1$s? %2$s.</string>
+    <string name="jf_no_players">No Jellyfin player is open to play %1$s. Open Jellyfin on your TV and ask again, or say “on my phone”.</string>
+    <string name="jf_no_such_player">There\'s no player called %1$s. %2$s</string>
+    <string name="jf_no_players_open">No Jellyfin player is open.</string>
+    <string name="jf_players_open">Open now: %1$s.</string>
+    <string name="jf_phone_one_only">On the phone Cog plays one video or song at a time: name a movie, an episode or a song.</string>
+    <string name="jf_no_video_app">There\'s no video player on this phone.</string>
+    <string name="jf_not_found">I couldn\'t find %1$s on Jellyfin.</string>
+    <string name="jf_no_show">I couldn\'t find a show called %1$s on Jellyfin.</string>
+    <string name="jf_no_episodes">%1$s has no episodes on Jellyfin.</string>
+    <string name="jf_no_season">%1$s has no season %2$d on Jellyfin.</string>
+    <string name="jf_no_episode">%1$s has no episode %3$d in season %2$d on Jellyfin.</string>
+    <string name="jf_last_episode">That was the last episode.</string>
+    <string name="jf_first_episode">That\'s the first episode.</string>
+    <string name="jf_no_genre">There\'s nothing in %1$s on Jellyfin.</string>
+    <string name="jf_library_empty">Your Jellyfin library is empty.</string>
+    <string name="jf_nothing_to_resume">There\'s nothing to continue watching.</string>
+
+    <!-- Controlling what plays -->
+    <string name="jf_nothing_playing">Nothing is playing on Jellyfin.</string>
+    <string name="jf_paused">Paused.</string>
+    <string name="jf_resumed">Resumed.</string>
+    <string name="jf_stopped">Stopped.</string>
+    <string name="jf_skipped">Skipped.</string>
+    <string name="jf_went_back">Went back.</string>
+    <string name="jf_from_start">Starting over.</string>
+    <string name="jf_jumped">Jumped to %1$s.</string>
+    <string name="jf_forward">Skipped ahead %1$s.</string>
+    <string name="jf_back">Went back %1$s.</string>
+    <string name="jf_volume_set">Volume at %1$d%%.</string>
+    <string name="jf_volume_up">Turned it up.</string>
+    <string name="jf_volume_down">Turned it down.</string>
+    <string name="jf_muted">Muted.</string>
+    <string name="jf_unmuted">Unmuted.</string>
+    <string name="jf_cant_volume">%1$s doesn\'t let Jellyfin change its volume.</string>
+    <string name="jf_subtitles_off">Subtitles off.</string>
+    <string name="jf_subtitles_on">%1$s subtitles on.</string>
+    <string name="jf_no_subtitles">%1$s has no subtitles.</string>
+    <string name="jf_no_subtitles_in">There are no %1$s subtitles for this. It has %2$s.</string>
+    <string name="jf_audio_set">Audio in %1$s.</string>
+    <string name="jf_one_audio">%1$s has only one audio track.</string>
+    <string name="jf_no_audio_in">There\'s no %1$s audio for this. It has %2$s.</string>
+    <string name="jf_track_number">track %1$d</string>
+
+    <!-- Questions -->
+    <string name="jf_now_playing">%1$s on %4$s: %2$s%3$s.%5$s</string>
+    <string name="jf_state_playing">Playing</string>
+    <string name="jf_state_paused">Paused</string>
+    <string name="jf_episode_name">, “%1$s”</string>
+    <string name="jf_left_short"> %1$s left.</string>
+    <string name="jf_time_left">%1$s left of %2$s. It ends at %3$s.</string>
+    <string name="jf_no_length">I don\'t know how long %1$s is.</string>
+    <string name="jf_new">New on Jellyfin: %1$s.</string>
+    <string name="jf_next_up">Up next: %1$s.</string>
+    <string name="jf_nothing_next">You\'re not in the middle of anything.</string>
+    <string name="jf_have">Yes: %1$s.</string>
+    <string name="jf_dont_have">I couldn\'t find %1$s on Jellyfin.</string>
+    <string name="jf_marked_watched">Marked %1$s as watched.</string>
+    <string name="jf_marked_unwatched">Marked %1$s as not watched.</string>
+
+    <!-- Words -->
+    <string name="jf_episode_label">%1$s, season %2$d episode %3$d</string>
+    <string name="jf_or">%1$s or %2$s</string>
+    <string name="jf_and">%1$s and %2$s</string>
+    <plurals name="jf_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="jf_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="jf_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+
+    <!-- Errors -->
+    <string name="jf_error_not_set_up">Set up Jellyfin first, in Cog settings under Integrations.</string>
+    <string name="jf_error_not_understood">Jellyfin didn\'t understand that.</string>
+    <string name="jf_error_unauthorized">Jellyfin didn\'t accept the user name or password.</string>
+    <string name="jf_error_unreachable">I couldn\'t reach your Jellyfin server.</string>
+    <string name="jf_error_refused">Jellyfin couldn\'t do that.</string>
+</resources>

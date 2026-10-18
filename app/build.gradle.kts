@@ -82,6 +82,7 @@ dependencies {
     // The integrations that come with Cog, each a module of its own, and what they're written against.
     implementation(project(":integration-api"))
     implementation(project(":integrations:homeassistant"))
+    implementation(project(":integrations:jellyfin"))
     implementation(project(":integrations:spotify"))
     implementation(project(":integrations:tasker"))
 

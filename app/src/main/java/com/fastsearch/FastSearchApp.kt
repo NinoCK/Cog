@@ -7,6 +7,7 @@ import com.bestassistant.device.CommandRunner
 import com.bestassistant.integrations.AppIntegrationHost
 import com.bestassistant.integrations.Integrations
 import com.bestassistant.integrations.homeassistant.HomeAssistantIntegration
+import com.bestassistant.integrations.jellyfin.JellyfinIntegration
 import com.bestassistant.integrations.spotify.SpotifyIntegration
 import com.bestassistant.integrations.tasker.TaskerIntegration
 import com.bestassistant.language.AppLanguage
@@ -77,7 +78,11 @@ class FastSearchApp : Application() {
         location = DeviceLocation(this)
         media = MediaControl(this)
         val host = AppIntegrationHost(this, { localized }, appScope)
-        integrations = Integrations(this, host, listOf(TaskerIntegration(host), HomeAssistantIntegration(host), SpotifyIntegration(host)))
+        // Jellyfin before Home Assistant: "pause the movie", "turn on subtitles" are what's playing, not a device.
+        integrations = Integrations(
+            this, host,
+            listOf(TaskerIntegration(host), JellyfinIntegration(host), HomeAssistantIntegration(host), SpotifyIntegration(host)),
+        )
         reminders = Reminders(this)
         parking = Parking(this)
         commands = CommandRunner(

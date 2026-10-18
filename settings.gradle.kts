@@ -20,5 +20,6 @@ include(":app")
 // module, installed (or not) from Cog's settings.
 include(":integration-api")
 include(":integrations:homeassistant")
+include(":integrations:jellyfin")
 include(":integrations:spotify")
 include(":integrations:tasker")
