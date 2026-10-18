@@ -1,7 +1,6 @@
 package com.fastsearch.settings
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -19,12 +18,12 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Hearing
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.bestassistant.media.SpotifyRemote
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -72,11 +71,9 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Mic
 import com.bestassistant.language.AppLanguage
-import com.bestassistant.media.SpotifyPress
 import com.bestassistant.wake.WakeControl
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Straighten
-import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -132,7 +129,6 @@ import com.fastsearch.data.UnitSystem
 import com.fastsearch.fastSearch
 import com.fastsearch.ui.theme.FastSearchTheme
 import com.fastsearch.ui.theme.isDarkTheme
-import kotlinx.coroutines.launch
 
 /** Launcher entry point: first-run setup plus preferences. */
 class SettingsActivity : ComponentActivity() {
@@ -207,7 +203,6 @@ private fun SettingsScreen(
     var notificationsGranted by remember { mutableStateOf(hasNotifications(context)) }
     var overlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var mediaGranted by remember { mutableStateOf(context.fastSearch.media.hasAccess()) }
-    var pressGranted by remember { mutableStateOf(SpotifyPress.isEnabled(context)) }
     var engineDialog by remember { mutableStateOf(false) }
     val wakeModel by context.fastSearch.wakeModel.state.collectAsStateWithLifecycle()
     val wakeStatus by WakeControl.status.collectAsStateWithLifecycle()
@@ -222,7 +217,6 @@ private fun SettingsScreen(
         notificationsGranted = hasNotifications(context)
         overlayGranted = Settings.canDrawOverlays(context)
         mediaGranted = context.fastSearch.media.hasAccess()
-        pressGranted = SpotifyPress.isEnabled(context)
         onPauseOrDispose { }
     }
 
@@ -281,35 +275,28 @@ private fun SettingsScreen(
         }
     }
 
-    // Spotify's "allow Cog" screen; its answer is handled in the app scope, so leaving
-    // the screen or scrolling the section away doesn't lose it.
-    val spotifyAuth = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        context.fastSearch.appScope.launch { context.fastSearch.spotify.authorizationResult(result.resultCode, result.data) }
-    }
-    val connectSpotify = {
-        context.fastSearch.spotify.authorizationIntent(context as Activity)?.let { spotifyAuth.launch(it) }
-        Unit
-    }
-
     var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
-    BackHandler(enabled = page != SettingsPage.HOME) { page = SettingsPage.HOME }
+    // The integration whose page is open (SettingsPage.INTEGRATION), by its id.
+    var integrationId by rememberSaveable { mutableStateOf<String?>(null) }
+    val integration = context.fastSearch.integrations.all.firstOrNull { it.id == integrationId }
+    BackHandler(enabled = page != SettingsPage.HOME) { page = page.parent }
     val colors = MaterialTheme.colorScheme
-    val spotifyStatus by context.fastSearch.spotify.status.collectAsStateWithLifecycle()
+    val installed by context.fastSearch.integrations.installed.collectAsStateWithLifecycle()
     // The optional "press play" helper isn't counted: nothing is missing without it.
     val required = listOf(assistantHeld, contactsGranted, locationGranted, micGranted, mediaGranted)
 
     AnimatedContent(
         targetState = page,
         transitionSpec = {
-            val forward = targetState != SettingsPage.HOME
+            val forward = targetState.depth > initialState.depth
             (slideInHorizontally { width -> if (forward) width / 4 else -width / 4 } + fadeIn()) togetherWith
                 (slideOutHorizontally { width -> if (forward) -width / 4 else width / 4 } + fadeOut())
         },
         label = "settings page",
     ) { current ->
         SettingsPageScaffold(
-            title = stringResource(current.title),
-            onBack = if (current == SettingsPage.HOME) null else ({ page = SettingsPage.HOME }),
+            title = if (current == SettingsPage.INTEGRATION) integration?.name.orEmpty() else stringResource(current.title),
+            onBack = if (current == SettingsPage.HOME) null else ({ page = current.parent }),
             onTryIt = if (current == SettingsPage.HOME) onTryIt else null,
         ) {
             when (current) {
@@ -327,16 +314,14 @@ private fun SettingsScreen(
                                 },
                             ) { page = SettingsPage.PERMISSIONS }
                             PageRow(
-                                Icons.Rounded.LibraryMusic,
-                                R.string.page_spotify,
-                                stringResource(
-                                    when (spotifyStatus) {
-                                        SpotifyRemote.Status.Connected -> R.string.summary_spotify_connected
-                                        SpotifyRemote.Status.NotSetUp -> R.string.summary_spotify_off
-                                        else -> R.string.summary_spotify_unfinished
-                                    },
-                                ),
-                            ) { page = SettingsPage.SPOTIFY }
+                                Icons.Rounded.Extension,
+                                R.string.page_integrations,
+                                if (installed.isEmpty()) {
+                                    stringResource(R.string.summary_integrations_none)
+                                } else {
+                                    installed.joinToString(", ") { it.name }
+                                },
+                            ) { page = SettingsPage.INTEGRATIONS }
                             PageRow(Icons.Rounded.Hub, R.string.page_connections, stringResource(R.string.summary_connections)) {
                                 page = SettingsPage.CONNECTIONS
                             }
@@ -427,14 +412,6 @@ private fun SettingsScreen(
                             onAction = { context.startActivity(context.fastSearch.media.accessIntent()) },
                         )
                         StepRow(
-                            icon = Icons.Rounded.TouchApp,
-                            title = stringResource(R.string.step_press_title),
-                            body = stringResource(R.string.step_press_body),
-                            done = pressGranted,
-                            action = stringResource(R.string.action_allow),
-                            onAction = { context.startActivity(SpotifyPress.settingsIntent()) },
-                        )
-                        StepRow(
                             icon = Icons.Rounded.Gesture,
                             title = stringResource(R.string.step_gesture_title),
                             body = stringResource(R.string.step_gesture_body),
@@ -445,18 +422,20 @@ private fun SettingsScreen(
                     }
                 }
 
-                SettingsPage.SPOTIFY -> {
-                    item { SectionTitle(R.string.section_spotify) }
-                    item { Group { SpotifySection(settings, update, onConnect = connectSpotify) } }
-                    item { SectionTitle(R.string.section_playlists) }
-                    item { Group { PlaylistSection() } }
+                SettingsPage.INTEGRATIONS -> item {
+                    Group {
+                        IntegrationList { opened ->
+                            integrationId = opened.id
+                            page = SettingsPage.INTEGRATION
+                        }
+                    }
                 }
+
+                SettingsPage.INTEGRATION -> integration?.let { integrationPage(it) }
 
                 SettingsPage.CONNECTIONS -> {
                     item { SectionTitle(R.string.section_navigation) }
                     item { Group { NavigationSection(settings, update) } }
-                    item { SectionTitle(R.string.section_home_assistant) }
-                    item { Group { HomeAssistantSection(settings, update) } }
                     item { SectionTitle(R.string.section_tasker) }
                     item { Group { TaskerSection() } }
                 }
@@ -668,11 +647,17 @@ private fun SettingsScreen(
     }
 }
 
-/** The settings screen's pages: a menu, and one page per group of settings. */
-private enum class SettingsPage(@param:StringRes val title: Int) {
-    HOME(R.string.app_name),
+/**
+ * The settings screen's pages: a menu, and one page per group of settings. Back goes to [parent];
+ * [depth] says which way pages slide.
+ */
+private enum class SettingsPage(@param:StringRes val title: Int, val depth: Int = 1) {
+    HOME(R.string.app_name, depth = 0),
     PERMISSIONS(R.string.page_permissions),
-    SPOTIFY(R.string.page_spotify),
+    INTEGRATIONS(R.string.page_integrations),
+
+    /** One integration's page, titled with its name. */
+    INTEGRATION(R.string.page_integrations, depth = 2),
     CONNECTIONS(R.string.page_connections),
     WAKE(R.string.section_wake),
     VOICE(R.string.section_voice),
@@ -680,6 +665,9 @@ private enum class SettingsPage(@param:StringRes val title: Int) {
     SEARCH(R.string.section_search_settings),
     APPEARANCE(R.string.section_appearance),
     ABOUT(R.string.page_about),
+    ;
+
+    val parent: SettingsPage get() = if (this == INTEGRATION) INTEGRATIONS else HOME
 }
 
 /** One page: a collapsing title bar (with a back arrow below the menu) and its scrolling settings. */
@@ -805,7 +793,7 @@ private fun HeroCard(assistantHeld: Boolean, onSetDefault: () -> Unit) {
 }
 
 @Composable
-private fun Group(content: @Composable () -> Unit) {
+internal fun Group(content: @Composable () -> Unit) {
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -816,9 +804,12 @@ private fun Group(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SectionTitle(title: Int) {
+private fun SectionTitle(title: Int) = SectionTitle(stringResource(title))
+
+@Composable
+internal fun SectionTitle(title: String) {
     Text(
-        text = stringResource(title),
+        text = title,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 12.dp, top = 12.dp),

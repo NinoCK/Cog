@@ -26,9 +26,9 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AirplanemodeActive
 import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.AutoMode
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material.icons.rounded.Work
@@ -93,6 +93,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -287,13 +288,16 @@ private fun describe(command: Command, contact: Contact?): CommandText {
             contact?.number.orEmpty(),
         )
         is Command.RunTask -> CommandText(Icons.Rounded.AutoMode, stringResource(R.string.cmd_task, command.name), "Tasker")
-        is Command.SmartHome -> CommandText(
-            Icons.Rounded.Lightbulb,
-            command.text.replaceFirstChar(Char::titlecase),
-            stringResource(
-                if (context.fastSearch.commands.hasHomeAssistant) R.string.cmd_smart_home else R.string.cmd_smart_home_not_set_up,
-            ),
-        )
+        is Command.Integration -> {
+            // What the integration says it will do, with its own icon.
+            val integration = context.fastSearch.integrations[command.integration]
+            val card = integration?.card(command.request)
+            CommandText(
+                integration?.let { ImageVector.vectorResource(it.icon) } ?: Icons.Rounded.Extension,
+                card?.title ?: integration?.name.orEmpty(),
+                card?.subtitle ?: integration?.name.orEmpty(),
+            )
+        }
         is Command.Camera -> CommandText(
             if (command.video) Icons.Rounded.Videocam else Icons.Rounded.PhotoCamera,
             stringResource(if (command.video) R.string.cmd_video else R.string.cmd_photo),

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Spotify IDs are looked up on Wikidata and MusicBrainz. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <queries>
+        <package android:name="com.spotify.music" />
+    </queries>
+
+    <application>
+        <!--
+            Optional, user-enabled: taps Spotify's play button once after "play ..." (Spotify opens
+            pages for other apps but won't start them). Limited to Spotify's windows.
+        -->
+        <service
+            android:name="com.bestassistant.media.SpotifyPlayService"
+            android:exported="true"
+            android:label="@string/press_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/spotify_press_service" />
+        </service>
+    </application>
+</manifest>

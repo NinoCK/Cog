@@ -66,17 +66,11 @@ data class AppSettings(
     /** Listen for [wakePhrase] in the background and open the assistant when it's heard. */
     val wakeWord: Boolean = false,
     val wakePhrase: String = DEFAULT_WAKE_PHRASE,
-    /** The user's own Spotify developer Client ID; empty when they haven't set one up. */
-    val spotifyClientId: String = "",
     /** Which app "take me to ..." opens. */
     val navigationApp: NavigationChoice = NavigationChoice.AUTO,
     /** Where "take me home" goes; empty lets Waze use its own saved Home. */
     val homeAddress: String = "",
     val workAddress: String = "",
-    /** The user's Home Assistant, e.g. http://homeassistant.local:8123; empty when not set up. */
-    val homeAssistantUrl: String = "",
-    /** A long-lived access token created in the user's Home Assistant profile. */
-    val homeAssistantToken: String = "",
 ) {
     companion object {
         const val DEFAULT_WAKE_PHRASE = "ok Cog"
@@ -102,9 +96,6 @@ enum class SpeechMode {
  */
 class AppPreferences(context: Context) {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-
-    /** Credentials (the Home Assistant token), kept out of device backups: see res/xml/backup_rules.xml. */
-    private val secrets = context.getSharedPreferences(SECRETS_FILE, Context.MODE_PRIVATE)
     private val state = MutableStateFlow(read())
     val settings: StateFlow<AppSettings> = state.asStateFlow()
 
@@ -113,7 +104,6 @@ class AppPreferences(context: Context) {
 
     init {
         prefs.registerOnSharedPreferenceChangeListener(listener)
-        secrets.registerOnSharedPreferenceChangeListener(listener)
     }
 
     var askedForContacts: Boolean
@@ -155,13 +145,10 @@ class AppPreferences(context: Context) {
             putBoolean(KEY_LISTEN_ON_OPEN, next.listenOnOpen)
             putBoolean(KEY_WAKE_WORD, next.wakeWord)
             putString(KEY_WAKE_PHRASE, next.wakePhrase)
-            putString(KEY_SPOTIFY_CLIENT_ID, next.spotifyClientId)
             putString(KEY_NAVIGATION_APP, next.navigationApp.name)
             putString(KEY_HOME_ADDRESS, next.homeAddress)
             putString(KEY_WORK_ADDRESS, next.workAddress)
-            putString(KEY_HA_URL, next.homeAssistantUrl)
         }
-        secrets.edit { putString(KEY_HA_TOKEN, next.homeAssistantToken) }
     }
 
     private fun read(): AppSettings {
@@ -186,18 +173,14 @@ class AppPreferences(context: Context) {
             listenOnOpen = prefs.getBoolean(KEY_LISTEN_ON_OPEN, defaults.listenOnOpen),
             wakeWord = prefs.getBoolean(KEY_WAKE_WORD, defaults.wakeWord),
             wakePhrase = prefs.getString(KEY_WAKE_PHRASE, null)?.takeIf { it.isNotBlank() } ?: defaults.wakePhrase,
-            spotifyClientId = prefs.getString(KEY_SPOTIFY_CLIENT_ID, null).orEmpty(),
             navigationApp = runCatching { NavigationChoice.valueOf(prefs.getString(KEY_NAVIGATION_APP, null)!!) }
                 .getOrDefault(defaults.navigationApp),
             homeAddress = prefs.getString(KEY_HOME_ADDRESS, null).orEmpty(),
             workAddress = prefs.getString(KEY_WORK_ADDRESS, null).orEmpty(),
-            homeAssistantUrl = prefs.getString(KEY_HA_URL, null).orEmpty(),
-            homeAssistantToken = secrets.getString(KEY_HA_TOKEN, null).orEmpty(),
         )
     }
 
     private companion object {
-        const val SECRETS_FILE = "secrets"
         const val KEY_WEB = "web_suggestions"
         const val KEY_ANSWERS = "instant_answers"
         const val KEY_CONTACTS = "search_contacts"
@@ -221,11 +204,8 @@ class AppPreferences(context: Context) {
         const val KEY_WAKE_PHRASE = "wake_phrase"
         const val KEY_ASKED_MIC = "asked_microphone"
         const val KEY_ASKED_TASKER = "asked_tasker"
-        const val KEY_SPOTIFY_CLIENT_ID = "spotify_client_id"
         const val KEY_NAVIGATION_APP = "navigation_app"
         const val KEY_HOME_ADDRESS = "home_address"
         const val KEY_WORK_ADDRESS = "work_address"
-        const val KEY_HA_URL = "home_assistant_url"
-        const val KEY_HA_TOKEN = "home_assistant_token"
     }
 }

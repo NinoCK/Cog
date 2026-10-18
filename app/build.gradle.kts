@@ -22,7 +22,8 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        // Where Spotify's sign-in returns to: SpotifyRemote.REDIRECT_URI, bestassistant://spotify-callback.
+        // Where Spotify's sign-in returns to (the Spotify integration's SpotifyRemote.REDIRECT_URI,
+        // bestassistant://spotify-callback): its sign-in library declares the screen with these.
         manifestPlaceholders["redirectSchemeName"] = "bestassistant"
         manifestPlaceholders["redirectHostName"] = "spotify-callback"
         applicationId = "com.bestassistant.app"
@@ -78,14 +79,10 @@ dependencies {
     implementation(libs.androidx.profileinstaller)
     implementation(libs.vosk.android)
     implementation(libs.jna) { artifact { type = "aar" } }
-    // Spotify's App Remote SDK (github.com/spotify/android-sdk, v0.8.0): starts playback in the
-    // Spotify app when the user has added their own Client ID. Gson is its JSON mapper.
-    implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
-    implementation(libs.gson)
-    // Spotify's sign-in library (same release, v2.1.0): asks for the user's OK from our own screen,
-    // inside the Spotify app; AndroidX Browser is its fallback when Spotify isn't installed.
-    implementation(files("libs/spotify-auth-release-2.1.0.aar"))
-    implementation(libs.androidx.browser)
+    // The integrations that come with Cog, each a module of its own, and what they're written against.
+    implementation(project(":integration-api"))
+    implementation(project(":integrations:homeassistant"))
+    implementation(project(":integrations:spotify"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

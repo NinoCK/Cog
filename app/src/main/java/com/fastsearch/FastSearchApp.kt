@@ -3,14 +3,14 @@ package com.fastsearch
 import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
-import com.bestassistant.automation.HomeAssistant
 import com.bestassistant.automation.Tasker
 import com.bestassistant.device.CommandRunner
+import com.bestassistant.integrations.AppIntegrationHost
+import com.bestassistant.integrations.Integrations
+import com.bestassistant.integrations.homeassistant.HomeAssistantIntegration
+import com.bestassistant.integrations.spotify.SpotifyIntegration
 import com.bestassistant.language.AppLanguage
 import com.bestassistant.media.MediaControl
-import com.bestassistant.media.SavedPlaylists
-import com.bestassistant.media.SpotifyCatalog
-import com.bestassistant.media.SpotifyRemote
 import com.bestassistant.parking.Parking
 import com.bestassistant.reminders.Reminders
 import com.bestassistant.speech.Responder
@@ -54,15 +54,12 @@ class FastSearchApp : Application() {
         private set
     lateinit var media: MediaControl
         private set
-    lateinit var playlists: SavedPlaylists
-        private set
-    lateinit var spotify: SpotifyRemote
-        private set
     lateinit var wakeModel: WakeModel
         private set
     lateinit var tasker: Tasker
         private set
-    lateinit var homeAssistant: HomeAssistant
+    /** Home Assistant, Spotify: each a module of its own, installed (or not) from settings. */
+    lateinit var integrations: Integrations
         private set
     lateinit var reminders: Reminders
         private set
@@ -81,15 +78,14 @@ class FastSearchApp : Application() {
         contacts = ContactRepository(this)
         location = DeviceLocation(this)
         media = MediaControl(this)
-        playlists = SavedPlaylists(this)
-        spotify = SpotifyRemote(this) { preferences.settings.value.spotifyClientId }
         tasker = Tasker(this)
-        homeAssistant = HomeAssistant({ preferences.settings.value.homeAssistantUrl }, { preferences.settings.value.homeAssistantToken })
+        val host = AppIntegrationHost(this, { localized }, appScope)
+        integrations = Integrations(this, host, listOf(HomeAssistantIntegration(host), SpotifyIntegration(host)))
         reminders = Reminders(this)
         parking = Parking(this)
         commands = CommandRunner(
-            this, { localized }, media, SpotifyCatalog(this), playlists, spotify,
-            settings = { preferences.settings.value }, tasker = tasker, home = homeAssistant,
+            this, { localized }, media,
+            settings = { preferences.settings.value }, tasker = tasker, integrations = integrations,
             location = location, reminders = reminders, parking = parking,
         )
         speaker = Speaker(this, preferences)

@@ -9,6 +9,8 @@
 Thumbs.db
 /build/
 /app/build/
+/integration-api/build/
+/integrations/*/build/
 /app/release/
 /app/debug/
 /captures/

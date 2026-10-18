@@ -99,7 +99,7 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
         is Command.NameDays -> forNameDays(command.date)
         is Command.NameDay -> forNameDay(command.name)
         is Command.RunTask -> s(R.string.say_task, command.name)
-        is Command.SmartHome -> null // Home Assistant answers for itself
+        is Command.Integration -> null // integrations answer for themselves
         is Command.Camera -> s(if (command.video) R.string.say_video else R.string.say_photo)
         is Command.OpenPanel -> {
             val name = context.getString(panelName(command.panel))

@@ -43,7 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.bestassistant.commands.Command
 import com.bestassistant.commands.MediaAction
-import com.bestassistant.device.Step
+import com.bestassistant.integration.Step
 import com.bestassistant.language.AppLanguage
 import com.bestassistant.listen.ListenState
 import com.bestassistant.listen.VoiceInput
@@ -448,18 +448,18 @@ class AssistActivity : ComponentActivity(), SearchActions {
                 pendingSpoken = null
                 val name = (state.command as Command.OpenApp).name
                 // "open the garage door" may be for Home Assistant rather than an app.
-                if (enabled) offerToHomeAssistant(state.query) { say(fastSearch.responder.forNoApp(name)) }
+                if (enabled) offerToIntegrations(state.query) { say(fastSearch.responder.forNoApp(name)) }
             }
             hit is TopHit.Calculation -> {
                 pendingSpoken = null
                 say(fastSearch.responder.forCalculation(hit.result))
             }
             else -> {
-                // Nothing this assistant knows how to do: Home Assistant may, else say so and leave the results on screen.
+                // Nothing this assistant knows how to do: an integration (Home Assistant) may, else say so and leave the results on screen.
                 pendingSpoken = null
                 if (state.command == null) {
                     if (enabled) {
-                        offerToHomeAssistant(state.query) { say(fastSearch.responder.forNothing(state.query)) }
+                        offerToIntegrations(state.query) { say(fastSearch.responder.forNothing(state.query)) }
                     } else {
                         say(fastSearch.responder.forNothing(state.query))
                     }
@@ -584,16 +584,17 @@ class AssistActivity : ComponentActivity(), SearchActions {
     }
 
     /**
-     * Offers a spoken request this assistant didn't understand to the user's Home Assistant, when
-     * set up; [otherwise] runs when it isn't, or doesn't understand it either.
+     * Offers a spoken request this assistant didn't understand to the installed integrations that
+     * take such requests (the user's Home Assistant, when set up); [otherwise] runs when none does,
+     * or none understands it either.
      */
-    private fun offerToHomeAssistant(text: String, otherwise: () -> Unit) {
-        if (!fastSearch.commands.hasHomeAssistant) {
+    private fun offerToIntegrations(text: String, otherwise: () -> Unit) {
+        if (!fastSearch.commands.takesUnknown) {
             otherwise()
             return
         }
         lifecycleScope.launch {
-            when (val step = fastSearch.commands.tryHomeAssistant(text)) {
+            when (val step = fastSearch.commands.tryIntegrations(text)) {
                 is Step.Done, is Step.Failed, is Step.Ask -> finishStep(step, null, null)
                 else -> otherwise()
             }
@@ -619,9 +620,9 @@ class AssistActivity : ComponentActivity(), SearchActions {
         }
         say(step.spoken ?: fastSearch.responder.forCommand(command, contact))
         step.then?.let { then -> fastSearch.appScope.launch { then() } }
-        if (step.confirmation != null) {
+        step.confirmation?.let { confirmation ->
             // Clock intents with EXTRA_SKIP_UI show nothing; confirm and close ourselves.
-            toastText(step.confirmation)
+            toastText(confirmation)
             dismissSignal++
         }
     }

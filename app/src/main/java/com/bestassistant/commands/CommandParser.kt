@@ -1,5 +1,7 @@
 package com.bestassistant.commands
 
+import com.bestassistant.integration.RequestParser
+import com.bestassistant.integration.Slot
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -14,6 +16,13 @@ import java.util.Locale
  */
 object CommandParser {
 
+    /** An installed integration's own requests, found by [parser] and run by the integration with [id]. */
+    class Installed(val id: String, val parser: RequestParser)
+
+    /** The installed integrations, asked in this order at their [Slot]s; kept up to date by the app. */
+    @Volatile
+    var integrations: List<Installed> = emptyList()
+
     fun parse(input: String, now: LocalDateTime = LocalDateTime.now()): Command? {
         val text = normalize(input)
         if (text.isEmpty() || text.length > MAX_LENGTH) return null
@@ -27,8 +36,7 @@ object CommandParser {
             ?: flashlight(text)
             ?: volume(text)
             ?: media(text)
-            ?: homeQuestion(text)
-            ?: deviceSetting(text)
+            ?: integration(text, Slot.EARLY)
             ?: music(text)
             ?: weather(text)
             ?: clock(text)
@@ -39,7 +47,7 @@ object CommandParser {
             ?: message(text)
             ?: panel(text)
             ?: task(text)
-            ?: smartHome(text)
+            ?: integration(text, Slot.LATE)
             ?: webSearch(text)
             ?: lookup(text)
             ?: openApp(text)
@@ -931,62 +939,6 @@ object CommandParser {
         return cleaned.takeIf { it.isNotEmpty() && it != "tasker" }?.let(Command::RunTask)
     }
 
-    /** "ask home assistant to ...", "... in home assistant": whatever follows is for Home Assistant. */
-    private val toHomeAssistant = Regex("^(?:ask |tell |hey )?(?:home assistant|homeassistant|home-assistant)(?: to| please)? (.+)$")
-    private val inHomeAssistant = Regex("^(.+?) (?:in|on|with|using|via|through) (?:home assistant|homeassistant)$")
-
-    /** Device control that Home Assistant's Assist understands; the phone's own switches are matched before this. */
-    private val switchDevice = Regex("^(?:turn|switch|power) (?:on|off) (?:the |my |all |all the )?(.+)$")
-    private val switchDeviceAfter = Regex("^(?:turn|switch|power) (?:the |my |all |all the )?(.+?) (?:on|off)$")
-    private val dimDevice = Regex("^(?:dim|brighten|lock|unlock)(?: the| my| all| all the)? (.+)$")
-    private val setDevice = Regex("^(?:set|turn|put|change) (?:the |my )?(.+?) (?:to|at) (\\d{1,3})(?: ?%| percent| degrees?)?$")
-    private val scene = Regex("^(?:activate|run|start|turn on|set|enable)(?: the| my)? (.+?) (?:scene|mode)$")
-    private val openCover = Regex("^(?:open|close|raise|lower|shut)(?: the| my| all the| all)? (.+)$")
-    private val coverWords = setOf(
-        "garage", "blinds", "blind", "curtains", "curtain", "shades", "shade", "shutters", "shutter", "gate", "awning",
-        "door", "garage door", "front door", "back door", "valve", "window", "windows", "roller", "rollers",
-    )
-    private val notDevices = setOf(
-        "it", "this", "that", "everything", "something", "music", "media", "sound", "phone", "screen", "volume", "the volume",
-        "alarm", "the alarm", "timer", "the timer", "song", "the song", "brightness", "the brightness", "screen brightness",
-        // The phone's own modes, which only its settings can change.
-        "dark", "light", "airplane", "aeroplane", "flight", "silent", "vibrate", "focus", "driving", "battery saver",
-        "power saving", "low power", "reading",
-    )
-
-    /** "Is the front door locked?", "what's the temperature in the bedroom?" before the weather takes it. */
-    private fun homeQuestion(text: String): Command? = HomeQuestions.parse(text)?.let { Command.SmartHome(text, query = it) }
-
-    /** "Put the AC on cool" before music takes "put ... on" as a song. */
-    private fun deviceSetting(text: String): Command? {
-        val setting = HomeSettings.parse(text) ?: return null
-        if (setting.value.let { it is SettingValue.Word && it.text in setOf("on", "off") }) return null
-        return smartHome(text)
-    }
-
-    private fun smartHome(text: String): Command? {
-        (toHomeAssistant.matchEntire(text) ?: inHomeAssistant.matchEntire(text))?.let { m ->
-            val request = m.groupValues[1].trim()
-            HomeQuestions.parse(request)?.let { return Command.SmartHome(request, query = it) }
-            val group = HomeGroups.parse(request)
-            return Command.SmartHome(request, group, if (group == null) HomeSettings.parse(request, strict = false) else null)
-        }
-        HomeGroups.parse(text)?.let { return Command.SmartHome(text, it) }
-        HomeSettings.parse(text)?.let { setting ->
-            // "Arm the alarm" is the house's alarm; "set the alarm to ..." the phone's.
-            if (setting.value is SettingValue.Action || setting.target.trim() !in notDevices) return Command.SmartHome(text, setting = setting)
-        }
-        val device = switchDevice.matchEntire(text)?.groupValues?.get(1)
-            ?: switchDeviceAfter.matchEntire(text)?.groupValues?.get(1)
-            ?: dimDevice.matchEntire(text)?.groupValues?.get(1)
-            ?: setDevice.matchEntire(text)?.groupValues?.get(1)
-            ?: scene.matchEntire(text)?.groupValues?.get(1)
-            ?: openCover.matchEntire(text)?.groupValues?.get(1)?.takeIf { rest -> words(rest).any { it in coverWords } }
-            ?: return null
-        if (device.trim() in notDevices) return null
-        return Command.SmartHome(text)
-    }
-
     private val openPattern = Regex("^(?:open|launch|start|run|go to|show me) (?:up )?(?:the |my )?(.+?)(?: app| application)?$")
 
     private fun openApp(text: String): Command? {
@@ -997,6 +949,13 @@ object CommandParser {
     }
 
     // endregion
+
+    private fun integration(text: String, slot: Slot): Command? {
+        for (installed in integrations) {
+            installed.parser.parse(text, slot)?.let { return Command.Integration(installed.id, it) }
+        }
+        return null
+    }
 
     private fun conversion(text: String): Command? = UnitConverter.parse(text)?.let(Command::Convert)
 

@@ -1,9 +1,22 @@
 package com.bestassistant.commands
 
+import com.bestassistant.integrations.homeassistant.DeviceKind
+import com.bestassistant.integrations.homeassistant.DeviceSetting
+import com.bestassistant.integrations.homeassistant.DeviceVerb
+import com.bestassistant.integrations.homeassistant.HomeAction
+import com.bestassistant.integrations.homeassistant.HomeAssistantIntegration
+import com.bestassistant.integrations.homeassistant.HomeGroup
+import com.bestassistant.integrations.homeassistant.HomeRequest
+import com.bestassistant.integrations.homeassistant.HomeRequests
+import com.bestassistant.integrations.homeassistant.HomeSettings
+import com.bestassistant.integrations.homeassistant.NumberUnit
+import com.bestassistant.integrations.homeassistant.SettingValue
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -15,7 +28,23 @@ class CommandParserTest {
 
     private fun parse(text: String, now: LocalDateTime = morning) = CommandParser.parse(text, now)
 
-    private fun home(text: String) = (parse(text) as? Command.SmartHome)?.text
+    /** With the Home Assistant integration installed, as most of these sentences assume. */
+    @Before
+    fun installHomeAssistant() {
+        CommandParser.integrations = listOf(CommandParser.Installed(HomeAssistantIntegration.ID, HomeRequests))
+    }
+
+    @After
+    fun uninstall() {
+        CommandParser.integrations = emptyList()
+    }
+
+    private fun smartHome(text: String, group: HomeGroup? = null, setting: DeviceSetting? = null) =
+        Command.Integration(HomeAssistantIntegration.ID, HomeRequest(text, group, setting))
+
+    private fun homeRequest(text: String) = ((parse(text) as? Command.Integration)?.request as? HomeRequest)
+
+    private fun home(text: String) = homeRequest(text)?.text
 
     private fun alarm(text: String, now: LocalDateTime = morning): Command.SetAlarm {
         val command = parse(text, now)
@@ -312,7 +341,7 @@ class CommandParserTest {
     fun smartHome() {
         assertEquals("turn on the kitchen light", home("turn on the kitchen light"))
         assertEquals(
-            Command.SmartHome("turn off all the lights", HomeGroup(HomeAction.OFF, DeviceKind.LIGHT)),
+            smartHome("turn off all the lights", HomeGroup(HomeAction.OFF, DeviceKind.LIGHT)),
             parse("please turn off all the lights"),
         )
         assertEquals("turn the bedroom lamp off", home("turn the bedroom lamp off"))
@@ -322,7 +351,7 @@ class CommandParserTest {
         assertEquals("set the living room lights to 40%", home("set the living room lights to 40%"))
         assertEquals("lock the front door", home("lock the front door"))
         assertEquals("close the garage door", home("close the garage door"))
-        assertEquals(Command.SmartHome("open the blinds", HomeGroup(HomeAction.OPEN, DeviceKind.COVER)), parse("open the blinds"))
+        assertEquals(smartHome("open the blinds", HomeGroup(HomeAction.OPEN, DeviceKind.COVER)), parse("open the blinds"))
         assertEquals("activate movie night scene", home("activate movie night scene"))
         assertEquals("is the front door locked", home("ask home assistant is the front door locked"))
         assertEquals("start the vacuum", home("start the vacuum in home assistant"))
@@ -337,7 +366,7 @@ class CommandParserTest {
 
     @Test
     fun smartHomeSettings() {
-        fun setting(text: String) = (parse(text) as? Command.SmartHome)?.setting
+        fun setting(text: String) = homeRequest(text)?.setting
         assertEquals(DeviceSetting("the ac", SettingValue.Number(22.0)), setting("set the ac to 22"))
         assertEquals(DeviceSetting("the bedroom ac", SettingValue.Number(22.5, NumberUnit.DEGREES)), setting("set the bedroom ac to 22.5 degrees"))
         assertEquals(DeviceSetting("the ac in the bedroom", SettingValue.Word("cooling")), setting("set the ac in the bedroom to cooling"))
@@ -357,19 +386,19 @@ class CommandParserTest {
         assertEquals(DeviceSetting("the purifier child lock", SettingValue.Word("off")), setting("disable the purifier child lock"))
         assertEquals(DeviceSetting("bedroom ac", SettingValue.Number(24.0)), setting("bedroom ac to 24"))
         assertEquals(
-            Command.SmartHome("set kevin to sleep mode", setting = DeviceSetting("kevin", SettingValue.Word("sleep mode"))),
+            smartHome("set kevin to sleep mode", setting = DeviceSetting("kevin", SettingValue.Word("sleep mode"))),
             parse("ask home assistant to set kevin to sleep mode"),
         )
         // Not about a device in the house.
         assertNull(setting("set the timer to 5 minutes"))
         assertEquals(Command.Volume(VolumeChange.Set(50)), parse("set the volume to 50"))
         assertNull(setting("set the mood to happy"))
-        assertEquals(DeviceSetting("kevin", SettingValue.Word("sleep mode")), HomeSettings.loose("set Kevin to sleep mode"))
+        assertEquals(DeviceSetting("kevin", SettingValue.Word("sleep mode")), HomeSettings.loose(CommandParser.normalize("set Kevin to sleep mode")))
     }
 
     @Test
     fun smartHomeColoursMediaAndActions() {
-        fun setting(text: String) = (parse(text) as? Command.SmartHome)?.setting
+        fun setting(text: String) = homeRequest(text)?.setting
         fun action(verb: DeviceVerb, mode: String? = null) = SettingValue.Action(verb, mode)
         assertEquals(DeviceSetting("the kitchen light", SettingValue.Word("red")), setting("turn the kitchen light red"))
         assertEquals(DeviceSetting("all the lights", SettingValue.Word("warm white")), setting("make all the lights warm white"))
@@ -400,7 +429,7 @@ class CommandParserTest {
         assertEquals(Command.OpenApp("spotify"), parse("open spotify"))
     }
 
-    private fun group(text: String) = (parse(text) as? Command.SmartHome)?.group
+    private fun group(text: String) = homeRequest(text)?.group
 
     @Test
     fun smartHomeGroups() {
@@ -425,7 +454,7 @@ class CommandParserTest {
         assertEquals(HomeGroup(HomeAction.OFF, null), group("turn everything off"))
         assertEquals(HomeGroup(HomeAction.OFF, null, "kitchen"), group("turn off everything in the kitchen"))
         assertEquals(
-            Command.SmartHome("turn off all the lights", HomeGroup(HomeAction.OFF, DeviceKind.LIGHT)),
+            smartHome("turn off all the lights", HomeGroup(HomeAction.OFF, DeviceKind.LIGHT)),
             parse("ask home assistant to turn off all the lights"),
         )
         // One device stays with Home Assistant's Assist.
@@ -439,6 +468,23 @@ class CommandParserTest {
         // The phone's own switches still come first.
         assertEquals(Command.Flashlight(Switch.OFF), parse("turn off the flashlight"))
         assertEquals(Command.OpenPanel(SettingsPanel.WIFI, Switch.OFF), parse("turn off wifi"))
+    }
+
+    @Test
+    fun questionsNotAboutTheHouse() {
+        assertTrue(parse("what's the temperature in london") is Command.Weather)
+        assertTrue(parse("what's the temperature outside") is Command.Weather)
+        assertTrue(parse("what's the temperature") is Command.Weather)
+        assertNull(homeRequest("is the bakery open"))
+        assertTrue(homeRequest("lower the bedroom temperature").let { it != null && it.query == null })
+    }
+
+    @Test
+    fun withoutHomeAssistantInstalled() {
+        CommandParser.integrations = emptyList()
+        assertTrue(parse("turn off all the lights") !is Command.Integration)
+        assertTrue(parse("is the front door locked") !is Command.Integration)
+        assertEquals(Command.Flashlight(Switch.ON), parse("turn on the flashlight"))
     }
 
     private val today = morning.toLocalDate()
