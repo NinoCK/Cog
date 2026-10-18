@@ -6,11 +6,14 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.bestassistant.calendar.CalendarEvent
 import com.bestassistant.commands.Command
 import com.bestassistant.commands.CommandParser
 import com.bestassistant.commands.WeatherDay
+import com.bestassistant.phone.PhoneCall
 import com.bestassistant.weather.Forecast
 import com.bestassistant.wiki.Article
+import com.bestassistant.wiki.Definition
 import com.fastsearch.FastSearchApp
 import com.fastsearch.data.AppEntry
 import com.fastsearch.data.AppSettings
@@ -32,6 +35,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
 /** What pressing the keyboard's action key does, highlighted in the results. */
 sealed interface TopHit {
@@ -77,6 +82,42 @@ sealed interface WikiUi {
     val isSettled: Boolean get() = this !is Loading
 }
 
+/** "100 dollars in euros", with the ECB's rates. */
+@Immutable
+sealed interface CurrencyUi {
+    data class Loading(val command: Command.Currency) : CurrencyUi
+    data class Ready(val command: Command.Currency, val result: Double, val ratesDate: LocalDate) : CurrencyUi
+
+    /** The ECB doesn't publish a rate for one of them (any more). */
+    data class Unsupported(val command: Command.Currency) : CurrencyUi
+    data object Unavailable : CurrencyUi
+}
+
+/** "define serendipity", from Wiktionary. */
+@Immutable
+sealed interface DefinitionUi {
+    data class Loading(val word: String) : DefinitionUi
+    data class Ready(val definition: Definition) : DefinitionUi
+    data class NotFound(val word: String) : DefinitionUi
+    data object Unavailable : DefinitionUi
+}
+
+/** "what's on my calendar today", "what's my next meeting". */
+@Immutable
+sealed interface AgendaUi {
+    data object NeedsAccess : AgendaUi
+
+    /** [events] for [command]: the day's, or the next one alone. */
+    data class Ready(val command: Command, val events: List<CalendarEvent>) : AgendaUi
+}
+
+/** "who called me". */
+@Immutable
+sealed interface CallsUi {
+    data object NeedsAccess : CallsUi
+    data class Ready(val missed: List<PhoneCall>, val last: PhoneCall?) : CallsUi
+}
+
 @Immutable
 data class SearchUiState(
     val query: String = "",
@@ -94,6 +135,10 @@ data class SearchUiState(
     val commandContact: Contact? = null,
     val weather: WeatherUi? = null,
     val wiki: WikiUi? = null,
+    val currency: CurrencyUi? = null,
+    val definition: DefinitionUi? = null,
+    val agenda: AgendaUi? = null,
+    val calls: CallsUi? = null,
     val showExamples: Boolean = false,
     val topHit: TopHit? = null,
 )
@@ -104,6 +149,8 @@ class SearchViewModel(private val app: FastSearchApp) : ViewModel() {
     private val query = MutableStateFlow("")
     private val contactsPermission = MutableStateFlow(app.contacts.hasPermission())
     private val locationPermission = MutableStateFlow(app.location.hasPermission())
+    private val calendarPermission = MutableStateFlow(app.calendar.canRead())
+    private val callLogPermission = MutableStateFlow(app.calls.canRead())
     private val settings = app.preferences.settings
 
     fun onQueryChange(text: String) {
@@ -113,6 +160,8 @@ class SearchViewModel(private val app: FastSearchApp) : ViewModel() {
     fun refreshPermissions() {
         contactsPermission.value = app.contacts.hasPermission()
         locationPermission.value = app.location.hasPermission()
+        calendarPermission.value = app.calendar.canRead()
+        callLogPermission.value = app.calls.canRead()
         if (app.apps.apps.value.isEmpty()) app.apps.refresh()
     }
 
@@ -227,12 +276,81 @@ class SearchViewModel(private val app: FastSearchApp) : ViewModel() {
             )
         }
 
+    /** What the query asks for, worked out once for the answer cards below. */
+    private val parsed = query.map { CommandParser.parse(it) }.flowOn(Dispatchers.Default).distinctUntilChanged()
+
+    private val currency = parsed.map { it as? Command.Currency }.distinctUntilChanged().transformLatest { command ->
+        if (command == null) {
+            emit(null)
+            return@transformLatest
+        }
+        emit(CurrencyUi.Loading(command))
+        delay(250) // the amount may still be being typed
+        val rates = app.exchangeRates.rates().getOrNull()
+        val result = rates?.convert(command.amount, command.from, command.to)
+        emit(
+            when {
+                rates == null -> CurrencyUi.Unavailable
+                result == null -> CurrencyUi.Unsupported(command)
+                else -> CurrencyUi.Ready(command, result, rates.date)
+            },
+        )
+    }
+
+    private val definition = parsed.map { it as? Command.Define }.distinctUntilChanged().transformLatest { command ->
+        if (command == null) {
+            emit(null)
+            return@transformLatest
+        }
+        emit(DefinitionUi.Loading(command.word))
+        delay(400) // wait for the user to finish the word
+        val result = app.wiktionary.define(command.word)
+        val found = result.getOrNull()
+        emit(
+            when {
+                result.isFailure -> DefinitionUi.Unavailable
+                found == null -> DefinitionUi.NotFound(command.word)
+                else -> DefinitionUi.Ready(found)
+            },
+        )
+    }
+
+    private val agenda = combine(
+        parsed.map { c -> c.takeIf { it is Command.Agenda || it == Command.NextEvent } }.distinctUntilChanged(),
+        calendarPermission,
+    ) { command, granted -> command to granted }.transformLatest { (command, granted) ->
+        when {
+            command == null -> emit(null)
+            !granted -> emit(AgendaUi.NeedsAccess)
+            else -> emit(
+                AgendaUi.Ready(
+                    command,
+                    withContext(Dispatchers.IO) {
+                        if (command is Command.Agenda) app.calendar.events(command.from, command.days) else listOfNotNull(app.calendar.next())
+                    },
+                ),
+            )
+        }
+    }
+
+    private val calls = combine(parsed.map { it == Command.MissedCalls }.distinctUntilChanged(), callLogPermission) { asked, granted ->
+        asked to granted
+    }.transformLatest { (asked, granted) ->
+        when {
+            !asked -> emit(null)
+            !granted -> emit(CallsUi.NeedsAccess)
+            else -> emit(withContext(Dispatchers.IO) { CallsUi.Ready(app.calls.missed(), app.calls.lastIncoming()) })
+        }
+    }
+
+    private data class Cards(val currency: CurrencyUi?, val definition: DefinitionUi?, val agenda: AgendaUi?, val calls: CallsUi?)
+
     val uiState: StateFlow<SearchUiState> = combine(
         local,
         contacts,
         suggestions,
         answer,
-        combine(settings, weather, wiki) { s, w, k -> Extras(s, w, k) },
+        combine(settings, weather, wiki, combine(currency, definition, agenda, calls, ::Cards)) { s, w, k, cards -> Extras(s, w, k, cards) },
     ) { l, c, s, a, extras ->
         val st = extras.settings
         val normalizedQuery = l.query.lowercase()
@@ -262,12 +380,16 @@ class SearchViewModel(private val app: FastSearchApp) : ViewModel() {
             commandContact = commandContact,
             weather = extras.weather,
             wiki = extras.wiki,
+            currency = extras.cards.currency,
+            definition = extras.cards.definition,
+            agenda = extras.cards.agenda,
+            calls = extras.cards.calls,
             showExamples = l.query.isEmpty(),
             topHit = topHit(l, c, commandContact),
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, SearchUiState())
 
-    private data class Extras(val settings: AppSettings, val weather: WeatherUi?, val wiki: WikiUi?)
+    private data class Extras(val settings: AppSettings, val weather: WeatherUi?, val wiki: WikiUi?, val cards: Cards)
 
     private fun computeLocal(rawQuery: String, apps: List<AppEntry>, settings: AppSettings): Local {
         val q = rawQuery.trim()

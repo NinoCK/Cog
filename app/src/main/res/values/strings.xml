@@ -391,7 +391,7 @@
 
     <string name="section_privacy">Privacy</string>
     <string name="privacy_title">Your requests stay on the device</string>
-    <string name="privacy_body">Commands are understood on the phone itself, with no AI service and no cloud. Alarms, timers, the flashlight, volume, media, conversions, the world clock, apps, contacts and calculations never leave your phone. The wake word is heard by an offline listener on the phone. Web suggestions and instant answers send what you type to DuckDuckGo. Weather sends a city name, or your location rounded to about 1 km, to Open-Meteo. “What is…” questions are sent to Wikipedia. The name of an artist, song or album you ask Spotify to play is looked up on Wikidata, once. The optional “press play in Spotify” helper only looks at Spotify, for a few seconds after you ask. Replies are spoken by the phone\'s own offline voice.</string>
+    <string name="privacy_body">Commands are understood on the phone itself, with no AI service and no cloud. Alarms, timers, the flashlight, volume, media, conversions, the world clock, apps, contacts and calculations never leave your phone. The wake word is heard by an offline listener on the phone. Web suggestions and instant answers send what you type to DuckDuckGo. Weather sends a city name, or your location rounded to about 1 km, to Open-Meteo. “What is…” questions are sent to Wikipedia. The name of an artist, song or album you ask Spotify to play is looked up on Wikidata, once. The optional “press play in Spotify” helper only looks at Spotify, for a few seconds after you ask. Currency conversions download the European Central Bank\'s daily rates; nothing is sent. Words you ask to define are sent to Wiktionary. Your calendar and call history are read on the phone and never leave it. Replies are spoken by the phone\'s own offline voice.</string>
     <string name="version">Version %1$s</string>
 
     <!-- Settings menu: one page per group -->
@@ -531,4 +531,251 @@
     <string name="share_location_body">I\'m here: %1$s</string>
     <string name="say_share_location">A message to %1$s with your location. Simply tap send.</string>
     <string name="cmd_share_location">Send your location to %1$s</string>
+
+    <!-- Alarms and timers: off, snooze, stop -->
+    <string name="cmd_alarm_dismiss">Turn off the ringing alarm</string>
+    <string name="cmd_alarm_next_off">Turn off your next alarm</string>
+    <string name="cmd_alarms_off">Turn off all alarms</string>
+    <string name="cmd_alarm_off">Turn off the %1$s alarm</string>
+    <string name="cmd_snooze">Snooze the alarm</string>
+    <string name="cmd_snooze_for">Snooze for %1$s</string>
+    <string name="cmd_stop_timer">Stop the timer</string>
+    <string name="done_alarm_dismissed">Alarm turned off</string>
+    <string name="done_alarm_next_off">Turning off your next alarm</string>
+    <string name="done_alarms_off">Turning off all alarms</string>
+    <string name="done_alarm_off">Turning off the %1$s alarm</string>
+    <string name="done_snooze">Snoozed</string>
+    <string name="done_timer_stopped">Timer stopped</string>
+    <string name="say_alarm_dismissed">Turning off the alarm. Good morning.</string>
+    <string name="say_alarm_next_off">Turning off your next alarm.</string>
+    <string name="say_alarms_off">Turning off all of your alarms.</string>
+    <string name="say_alarm_off">Turning off your %1$s alarm.</string>
+    <string name="say_snooze">Snoozing. A few more minutes of rest.</string>
+    <string name="say_snooze_for">Snoozing for %1$s.</string>
+    <string name="say_timer_stopped">Stopping the timer.</string>
+    <string name="example_coin">flip a coin</string>
+
+    <!-- Battery -->
+    <string name="battery_caption">Battery</string>
+    <string name="battery_full">Full</string>
+    <string name="battery_charging">Charging</string>
+    <string name="battery_charging_until">Charging · full in %1$s</string>
+    <string name="battery_not_charging">Not charging</string>
+    <string name="say_battery">Your battery is at %1$d percent.</string>
+    <string name="say_battery_low">Your battery is at %1$d percent. I recommend charging soon.</string>
+    <string name="say_battery_charging">Your battery is at %1$d percent and charging.</string>
+    <string name="say_battery_charging_until">Your battery is at %1$d percent and charging. It will be full in about %2$s.</string>
+    <string name="say_battery_not_charging">Your phone is not charging. The battery is at %1$d percent.</string>
+    <string name="say_battery_full">Your battery is full.</string>
+    <string name="say_battery_unknown">I am unable to read the battery right now.</string>
+    <string name="example_battery">how much battery do I have</string>
+
+    <!-- Days until, what day -->
+    <string name="days_until">Until %1$s</string>
+    <string name="days_since">Since %1$s</string>
+    <plurals name="days_count">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="spoken_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="spoken_weeks">
+        <item quantity="one">%d week</item>
+        <item quantity="other">%d weeks</item>
+    </plurals>
+    <string name="say_occasion_in">%1$s is in %2$s, on %3$s.</string>
+    <string name="say_occasion_tomorrow">%1$s is tomorrow!</string>
+    <string name="say_occasion_today">%1$s is today!</string>
+    <string name="say_occasion_ago">%1$s was %2$s ago, on %3$s.</string>
+    <string name="say_date_in">There are %1$s until %2$s.</string>
+    <string name="say_date_tomorrow">That is tomorrow, %1$s.</string>
+    <string name="say_date_today">That is today, %1$s.</string>
+    <string name="say_date_ago">%1$s was %2$s ago.</string>
+    <string name="say_what_day_named">%1$s is on %2$s.</string>
+    <string name="say_what_day">%1$s is a %2$s.</string>
+    <string name="example_days_until">how many days until Christmas</string>
+
+    <!-- Coin, dice, numbers -->
+    <string name="cmd_coin">Flip a coin</string>
+    <string name="cmd_coin_note">Heads or tails</string>
+    <string name="cmd_die">Roll a die</string>
+    <string name="cmd_dice">Roll %1$d dice</string>
+    <string name="cmd_number">Pick a number</string>
+    <string name="cmd_range">%1$d to %2$d</string>
+    <string name="coin_heads">Heads</string>
+    <string name="coin_tails">Tails</string>
+    <string name="say_coin_heads">It is heads.</string>
+    <string name="say_coin_tails">It is tails.</string>
+    <string name="say_dice">You rolled a %1$d.</string>
+    <string name="say_dice_many">You rolled %1$s, for a total of %2$d.</string>
+    <string name="say_number">Your number is %1$d.</string>
+
+    <!-- Currencies -->
+    <string name="currency_loading">Checking the exchange rates…</string>
+    <string name="currency_attribution">ECB reference rate of %1$s</string>
+    <string name="currency_unsupported">The ECB has no rate between %1$s and %2$s</string>
+    <string name="currency_unavailable">Exchange rates can\'t be reached right now</string>
+    <string name="say_currency">%1$s %2$s is %3$s %4$s.</string>
+    <string name="say_currency_unavailable">I am unable to reach the European Central Bank for exchange rates at the moment.</string>
+    <string name="say_currency_unsupported">The European Central Bank publishes no rate between %1$s and %2$s.</string>
+    <string name="example_currency">100 dollars in euros</string>
+
+    <!-- Wiktionary, spelling -->
+    <string name="definition_loading">Looking up “%1$s” in Wiktionary…</string>
+    <string name="definition_not_found">Wiktionary has no entry for “%1$s”</string>
+    <string name="definition_unavailable">Wiktionary can\'t be reached right now</string>
+    <string name="definition_attribution">From Wiktionary · CC BY-SA · tap to open</string>
+    <string name="say_definition">%1$s, %2$s: %3$s</string>
+    <string name="say_definition_also">Also, %1$s: %2$s</string>
+    <string name="say_definition_missing">Wiktionary has no entry for %1$s.</string>
+    <string name="say_definition_unavailable">I am unable to reach Wiktionary at the moment.</string>
+    <string name="spell_caption">How to spell “%1$s”</string>
+    <string name="say_spelling">%1$s is spelled: %2$s.</string>
+    <string name="spell_hyphen">hyphen</string>
+    <string name="spell_apostrophe">apostrophe</string>
+    <string name="example_define">define serendipity</string>
+
+    <!-- Calendar -->
+    <string name="calendar_access_title">Your calendar</string>
+    <string name="calendar_access_body">Allow calendar access to read and add events. It stays on the phone.</string>
+    <string name="agenda_card_week">The days ahead</string>
+    <string name="agenda_card_from">From %1$s</string>
+    <string name="agenda_card_next">Next on your calendar</string>
+    <string name="agenda_card_empty">Nothing on your calendar</string>
+    <string name="agenda_card_none">Nothing coming up in the next month</string>
+    <string name="agenda_all_day">All day</string>
+    <string name="agenda_attribution">From the calendars on this phone</string>
+    <string name="agenda_this_week">this week</string>
+    <string name="agenda_next_week">next week</string>
+    <string name="agenda_weekend">this weekend</string>
+    <string name="agenda_coming_days">in the next few days</string>
+    <plurals name="say_events">
+        <item quantity="one">one event</item>
+        <item quantity="other">%d events</item>
+    </plurals>
+    <string name="say_agenda">%1$s you have %2$s: %3$s.</string>
+    <string name="say_agenda_empty">Your calendar is clear %1$s.</string>
+    <string name="say_agenda_more">And %1$d more.</string>
+    <string name="say_event_at">%1$s at %2$s</string>
+    <string name="say_event_all_day">%1$s, all day</string>
+    <string name="say_next_event">Your next event is %1$s, %2$s.</string>
+    <string name="say_next_event_at">Your next event is %1$s, %2$s, at %3$s.</string>
+    <string name="say_next_event_none">Nothing else is on your calendar for the next month.</string>
+    <string name="say_calendar_access">To read your calendar I require access to it. Tap Allow.</string>
+    <string name="cmd_add_event">Add “%1$s” to your calendar</string>
+    <string name="cmd_new_event">New calendar event</string>
+    <string name="cmd_event_ask">PocketSearch will ask when</string>
+    <string name="cmd_event_access">opens your calendar to save</string>
+    <string name="cmd_all_day">%1$s, all day</string>
+    <string name="ask_event_what">What shall I call the event?</string>
+    <string name="ask_event_when">When is it?</string>
+    <string name="error_event_time">I did not catch when. Try something like “tomorrow at 3” or “on Friday”.</string>
+    <string name="done_event">Added to your calendar: %1$s</string>
+    <string name="say_event_added">Done. %1$s is on your calendar %2$s.</string>
+    <string name="say_event_editor">Here is %1$s, %2$s, ready for your calendar. Simply tap save.</string>
+    <string name="say_event_cancelled">Very well. No event.</string>
+    <string name="day_today">today</string>
+    <string name="day_tomorrow">tomorrow</string>
+    <string name="day_yesterday">yesterday</string>
+    <string name="day_on">on %1$s</string>
+    <string name="moment_today">today at %1$s</string>
+    <string name="moment_tomorrow">tomorrow at %1$s</string>
+    <string name="moment_yesterday">yesterday at %1$s</string>
+    <string name="moment_day">on %1$s at %2$s</string>
+    <string name="moment_date">on %1$s at %2$s</string>
+    <string name="example_calendar">what\'s on my calendar today</string>
+    <string name="example_add_event">add dentist tomorrow at 3</string>
+
+    <!-- Brightness, silent, vibrate, do not disturb -->
+    <string name="cmd_brightness">Set brightness to %1$d%%</string>
+    <string name="cmd_brighter">Brighter screen</string>
+    <string name="cmd_dimmer">Dimmer screen</string>
+    <string name="cmd_brightness_auto_on">Adaptive brightness on</string>
+    <string name="cmd_brightness_auto_off">Adaptive brightness off</string>
+    <string name="cmd_screen">Screen</string>
+    <string name="cmd_brightness_permission">Needs “Modify system settings”, once: tap to allow</string>
+    <string name="cmd_silent">Silent mode</string>
+    <string name="cmd_vibrate">Vibrate mode</string>
+    <string name="cmd_ring">Ring mode</string>
+    <string name="cmd_ringer">Ringer</string>
+    <string name="done_brightness">Brightness %1$d%%</string>
+    <string name="error_brightness">I could not change the brightness.</string>
+    <string name="say_brightness">Brightness set to %1$d percent.</string>
+    <string name="say_brightness_adaptive_off">I have turned adaptive brightness off, so it stays there.</string>
+    <string name="say_brightness_auto_on">Adaptive brightness on.</string>
+    <string name="say_brightness_auto_off">Adaptive brightness off.</string>
+    <string name="say_brightness_permission">To change the brightness I need permission to modify system settings. Allow it for PocketSearch, then ask me again.</string>
+    <string name="say_ringer_silent">Silent mode engaged.</string>
+    <string name="say_ringer_vibrate">Vibrate mode engaged.</string>
+    <string name="say_ringer_normal">Ringer on.</string>
+    <string name="say_ringer_permission">To change silent mode I need Do Not Disturb access. Allow it for PocketSearch, then ask me again.</string>
+    <string name="say_dnd_on">Do Not Disturb is on.</string>
+    <string name="say_dnd_off">Do Not Disturb is off.</string>
+    <string name="example_silent">silent mode</string>
+    <string name="example_brightness" formatted="false">brightness 50%</string>
+
+    <!-- Routines -->
+    <string name="page_routines">Routines</string>
+    <string name="summary_routines_none">None yet</string>
+    <string name="routines_intro">Say one phrase and PocketSearch runs several requests, in order. Each step is an ordinary request, like “weather today” or “play my morning playlist on Spotify”. Steps that open an app work best last.</string>
+    <string name="routines_add_morning">Good morning</string>
+    <string name="routines_add">New routine</string>
+    <string name="routine_unnamed">New routine</string>
+    <string name="routine_phrases">When I say</string>
+    <string name="routine_phrases_hint">Several phrases? Separate them with commas</string>
+    <string name="routine_steps">Do this, in order</string>
+    <string name="routine_steps_hint">One request per line</string>
+    <string name="routine_step_unknown">Not a request PocketSearch knows: “%1$s”</string>
+    <string name="routine_delete">Delete routine</string>
+    <string name="routine_running">Running %1$s</string>
+    <string name="cmd_routine">Run “%1$s”</string>
+    <plurals name="cmd_routine_steps">
+        <item quantity="one">%1$d step: %2$s</item>
+        <item quantity="other">%1$d steps: %2$s</item>
+    </plurals>
+
+    <!-- Missed calls, call back -->
+    <string name="calls_access_title">Missed calls</string>
+    <string name="calls_access_body">Allow call history access to see who called. It stays on the phone.</string>
+    <string name="calls_card_none">No missed calls today</string>
+    <plurals name="calls_card_missed">
+        <item quantity="one">%d missed call</item>
+        <item quantity="other">%d missed calls</item>
+    </plurals>
+    <string name="calls_card_last">Last call</string>
+    <string name="calls_attribution">From this phone\'s call history</string>
+    <string name="cmd_call_back">Call %1$s back</string>
+    <string name="cmd_call_back_plain">Call back</string>
+    <string name="cmd_redial">Redial %1$s</string>
+    <string name="cmd_redial_plain">Redial</string>
+    <string name="cmd_calls_access">Needs call history access</string>
+    <string name="cmd_no_calls">No calls to return</string>
+    <plurals name="say_missed_calls">
+        <item quantity="one">one missed call</item>
+        <item quantity="other">%d missed calls</item>
+    </plurals>
+    <string name="say_missed_calls">You have %1$s: %2$s.</string>
+    <string name="say_missed_call_item">%1$s, %2$s</string>
+    <string name="say_missed_call_items">%1$s, %2$d times, last %3$s</string>
+    <string name="say_no_missed_calls">You have no missed calls.</string>
+    <string name="say_no_missed_calls_last">No missed calls today. The last call was from %1$s, %2$s.</string>
+    <string name="say_calls_access">To see who called I require access to your call history. Tap Allow.</string>
+    <string name="say_call_back">Calling %1$s back.</string>
+    <string name="say_redial">Calling %1$s again.</string>
+    <string name="error_call_log_permission">For that I require access to your call history. Allow it for PocketSearch in its app settings.</string>
+    <string name="error_no_calls">I find no calls to return.</string>
+    <string name="error_no_outgoing">I find no calls you have made.</string>
+    <string name="example_missed_calls">who called me</string>
+
+    <!-- Permissions page -->
+    <string name="step_calendar_title">Calendar</string>
+    <string name="step_calendar_body">“What\'s on my calendar today”, “add dentist tomorrow at 3”</string>
+    <string name="step_calls_title">Call history</string>
+    <string name="step_calls_body">“Who called me”, “call back”</string>
+    <string name="step_system_settings_title">Modify system settings</string>
+    <string name="step_system_settings_body" formatted="false">“Brightness 50%”, “dim the screen”</string>
+    <string name="step_dnd_title">Do Not Disturb access</string>
+    <string name="step_dnd_body">“Silent mode”, “turn on do not disturb”. Media control often includes it already.</string>
 </resources>

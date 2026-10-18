@@ -1,8 +1,18 @@
 package com.bestassistant.speech
 
 import android.content.Context
+import com.bestassistant.calendar.CalendarEvent
+import com.bestassistant.commands.AlarmTarget
 import com.bestassistant.commands.Command
+import com.bestassistant.commands.Currencies
 import com.bestassistant.commands.MediaAction
+import com.bestassistant.device.Battery
+import com.bestassistant.phone.PhoneCall
+import com.bestassistant.wiki.Definition
+import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
+import java.time.temporal.ChronoUnit
 import com.bestassistant.commands.SavedPlace
 import com.bestassistant.commands.SettingsPanel
 import com.bestassistant.commands.Switch
@@ -53,6 +63,26 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
             if (command.label != null) s(R.string.say_timer_label, length, command.label) else s(R.string.say_timer, length)
         }
         Command.ShowTimers -> s(R.string.say_show_timers)
+        is Command.DismissAlarm -> when (val target = command.target) {
+            AlarmTarget.Ringing -> s(R.string.say_alarm_dismissed)
+            AlarmTarget.Next -> s(R.string.say_alarm_next_off)
+            AlarmTarget.All -> s(R.string.say_alarms_off)
+            is AlarmTarget.At -> s(
+                R.string.say_alarm_off,
+                if (target.pm == null) String.format(Locale.ROOT, "%d:%02d", target.hour, target.minute) else TimeText.clock(context, target.hour, target.minute),
+            )
+            is AlarmTarget.Labeled -> s(R.string.say_alarm_off, target.label)
+        }
+        is Command.SnoozeAlarm -> command.minutes?.let { s(R.string.say_snooze_for, TimeText.spokenDuration(context, it * 60)) } ?: s(R.string.say_snooze)
+        Command.StopTimer -> s(R.string.say_timer_stopped)
+        is Command.Battery -> forBattery(command)
+        is Command.DaysUntil -> forDaysUntil(command)
+        is Command.WhatDay -> forWhatDay(command)
+        is Command.Spell -> forSpelling(command.word)
+        // Said by the runner, which knows what came up, what it set and who it calls.
+        is Command.Chance, is Command.AddEvent, is Command.Brightness, is Command.Ringer, is Command.CallBack, is Command.Routine -> null
+        // Answered once their data arrives.
+        is Command.Currency, is Command.Define, is Command.Agenda, Command.NextEvent, Command.MissedCalls -> null
         is Command.Flashlight -> s(if (torchOn) R.string.say_torch_on else R.string.say_torch_off)
         is Command.Volume -> when (val change = command.change) {
             VolumeChange.Up -> s(R.string.say_volume_up)
@@ -229,6 +259,203 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
 
     // endregion
 
+    // region Battery, dates, words
+
+    fun forBattery(command: Command.Battery): String {
+        val state = Battery.read(context) ?: return s(R.string.say_battery_unknown)
+        val untilFull = state.minutesToFull?.let { TimeText.spokenDuration(context, it * 60) }
+        return when {
+            state.full -> s(R.string.say_battery_full)
+            state.charging && untilFull != null -> s(R.string.say_battery_charging_until, state.percent, untilFull)
+            state.charging -> s(R.string.say_battery_charging, state.percent)
+            command.charging -> s(R.string.say_battery_not_charging, state.percent)
+            state.percent <= LOW_BATTERY -> s(R.string.say_battery_low, state.percent)
+            else -> s(R.string.say_battery, state.percent)
+        }
+    }
+
+    /** "Christmas is in 68 days, on Friday 25 December." */
+    fun forDaysUntil(command: Command.DaysUntil, today: LocalDate = LocalDate.now()): String {
+        val days = abs(ChronoUnit.DAYS.between(today, command.date)).toInt()
+        val date = longDate(command.date, today)
+        val count = count(days, command.weeks)
+        val name = command.name?.replaceFirstChar { it.titlecase(Locale.ROOT) }
+        return when {
+            days == 0 -> if (name != null) s(R.string.say_occasion_today, name) else s(R.string.say_date_today, date)
+            command.since -> if (name != null) s(R.string.say_occasion_ago, name, count, date) else s(R.string.say_date_ago, date, count)
+            days == 1 -> if (name != null) s(R.string.say_occasion_tomorrow, name) else s(R.string.say_date_tomorrow, date)
+            name != null -> s(R.string.say_occasion_in, name, count, date)
+            else -> s(R.string.say_date_in, count, date)
+        }
+    }
+
+    /** "Christmas is on Friday, 25 December." or "3 March 2027 is a Wednesday." */
+    fun forWhatDay(command: Command.WhatDay, today: LocalDate = LocalDate.now()): String {
+        val name = command.name?.replaceFirstChar { it.titlecase(Locale.ROOT) }
+        if (name != null) return s(R.string.say_what_day_named, name, longDate(command.date, today))
+        return s(R.string.say_what_day, shortDate(command.date, today), command.date.dayOfWeek.getDisplayName(TextStyle.FULL, locale()))
+    }
+
+    /** "5 days", "9 weeks and 3 days". */
+    private fun count(days: Int, weeks: Boolean): String {
+        val r = context.resources
+        if (!weeks || days < 7) return r.getQuantityString(R.plurals.spoken_days, days, days)
+        val whole = r.getQuantityString(R.plurals.spoken_weeks, days / 7, days / 7)
+        return if (days % 7 == 0) whole else "$whole ${s(R.string.say_and)} ${r.getQuantityString(R.plurals.spoken_days, days % 7, days % 7)}"
+    }
+
+    /** "Friday, 25 December", with the year when it isn't this one. */
+    fun longDate(date: LocalDate, today: LocalDate = LocalDate.now()): String =
+        date.format(DateTimeFormatter.ofPattern(if (date.year == today.year) "EEEE, d MMMM" else "EEEE, d MMMM yyyy", locale()))
+
+    /** "25 December", with the year when it isn't this one. */
+    fun shortDate(date: LocalDate, today: LocalDate = LocalDate.now()): String =
+        date.format(DateTimeFormatter.ofPattern(if (date.year == today.year) "d MMMM" else "d MMMM yyyy", locale()))
+
+    /** "Necessary is spelled: N, E, C, E, S, S, A, R, Y." */
+    fun forSpelling(word: String): String = s(R.string.say_spelling, word.replaceFirstChar { it.titlecase(locale()) }, spelledOut(word))
+
+    /** Letters to read out one by one, words apart. */
+    fun spelledOut(word: String): String = word.trim().split(Regex("\\s+")).joinToString(". ") { part ->
+        part.mapNotNull { c ->
+            when {
+                c.isLetterOrDigit() -> c.uppercaseChar().toString()
+                c == '-' -> s(R.string.spell_hyphen)
+                c == '\'' -> s(R.string.spell_apostrophe)
+                else -> null
+            }
+        }.joinToString(", ")
+    }
+
+    fun forDefinition(definition: Definition): String {
+        val first = definition.senses.first()
+        val word = definition.word.replaceFirstChar { it.titlecase(locale()) }
+        val said = StringBuilder(s(R.string.say_definition, word, first.partOfSpeech.lowercase(locale()), WikipediaClient.spokenSummary(first.text, MAX_SENSE_CHARS)))
+        // A different kind of word next ("as a verb: ...").
+        definition.senses.drop(1).firstOrNull { it.partOfSpeech != first.partOfSpeech }?.let { other ->
+            said.append(' ').append(s(R.string.say_definition_also, other.partOfSpeech.lowercase(locale()), WikipediaClient.spokenSummary(other.text, MAX_SENSE_CHARS)))
+        }
+        return said.toString()
+    }
+
+    fun forDefinitionMissing(word: String) = s(R.string.say_definition_missing, word)
+    fun forDefinitionUnavailable() = s(R.string.say_definition_unavailable)
+
+    // endregion
+
+    // region Money
+
+    /** "100 US dollars is 88.87 euros." */
+    fun forCurrency(command: Command.Currency, result: Double): String =
+        s(R.string.say_currency, money(command.amount), currencyName(command.from, command.amount), money(result), currencyName(command.to, result))
+
+    fun forCurrencyUnavailable() = s(R.string.say_currency_unavailable)
+    fun forCurrencyUnsupported(command: Command.Currency) = s(R.string.say_currency_unsupported, command.from, command.to)
+
+    /** Two decimals for most amounts; small ones keep enough digits to mean something ("0.0056"). */
+    fun money(value: Double): String {
+        val rounded = if (abs(value) >= 1 || value == 0.0) {
+            BigDecimal(value).setScale(2, RoundingMode.HALF_UP)
+        } else {
+            BigDecimal(value).round(MathContext(3, RoundingMode.HALF_UP))
+        }
+        // Whole amounts without decimals ("100"), others with all of them ("88.80").
+        val whole = rounded.stripTrailingZeros().scale() <= 0
+        val format = java.text.NumberFormat.getNumberInstance(locale()).apply {
+            maximumFractionDigits = rounded.scale().coerceAtLeast(0)
+            minimumFractionDigits = if (whole) 0 else rounded.scale()
+        }
+        return format.format(rounded)
+    }
+
+    fun currencyName(code: String, amount: Double): String {
+        val (one, many) = Currencies.names[code] ?: return code
+        return if (amount == 1.0) one else many
+    }
+
+    // endregion
+
+    // region Calendar and calls
+
+    fun forCalendarNeedsAccess() = s(R.string.say_calendar_access)
+    fun forCallsNeedAccess() = s(R.string.say_calls_access)
+
+    /** "Today you have 2 events: Dentist at 10:00, and Lunch with Alex at 13:00." */
+    fun forAgenda(command: Command.Agenda, events: List<CalendarEvent>, today: LocalDate = LocalDate.now()): String {
+        val span = agendaSpan(command, today)
+        if (events.isEmpty()) return s(R.string.say_agenda_empty, span)
+        val manyDays = command.days > 1
+        val items = events.take(MAX_EVENTS).map { event ->
+            val day = if (manyDays) agendaDay(event.day, today) + ", " else ""
+            day + if (event.allDay) s(R.string.say_event_all_day, event.title) else s(R.string.say_event_at, event.title, TimeText.clock(context, event.start!!.hour, event.start.minute))
+        }
+        val more = (events.size - MAX_EVENTS).takeIf { it > 0 }?.let { s(R.string.say_agenda_more, it) }
+        val count = context.resources.getQuantityString(R.plurals.say_events, events.size, events.size)
+        return listOfNotNull(s(R.string.say_agenda, span.replaceFirstChar { it.titlecase(locale()) }, count, list(items)), more).joinToString(" ")
+    }
+
+    /** "today", "tomorrow", "on Friday", "this week", "on 3 March". */
+    private fun agendaSpan(command: Command.Agenda, today: LocalDate): String = when {
+        command.days == 1 -> agendaDay(command.from, today)
+        command.from.dayOfWeek == java.time.DayOfWeek.SATURDAY && command.days == 2 -> s(R.string.agenda_weekend)
+        command.from == today && command.days == COMING_DAYS -> s(R.string.agenda_coming_days)
+        command.from == today -> s(R.string.agenda_this_week)
+        else -> s(R.string.agenda_next_week)
+    }
+
+    private fun agendaDay(date: LocalDate, today: LocalDate): String {
+        val days = ChronoUnit.DAYS.between(today, date)
+        return when {
+            days == 0L -> s(R.string.day_today)
+            days == 1L -> s(R.string.day_tomorrow)
+            days == -1L -> s(R.string.day_yesterday)
+            days in 2..6 -> s(R.string.day_on, date.dayOfWeek.getDisplayName(TextStyle.FULL, locale()))
+            else -> s(R.string.day_on, shortDate(date, today))
+        }
+    }
+
+    /** "Your next event is Dentist, tomorrow at 15:00, at Smile Clinic." */
+    fun forNextEvent(event: CalendarEvent?, now: LocalDateTime = LocalDateTime.now()): String {
+        val start = event?.start ?: return s(R.string.say_next_event_none)
+        val whenText = moment(start, now)
+        return if (event.location != null) s(R.string.say_next_event_at, event.title, whenText, event.location) else s(R.string.say_next_event, event.title, whenText)
+    }
+
+    /** "You have 2 missed calls: Alex at 14:05, and Mom, 3 times, last at 9:12." */
+    fun forMissedCalls(missed: List<PhoneCall>, last: PhoneCall?, now: LocalDateTime = LocalDateTime.now()): String {
+        if (missed.isEmpty()) {
+            val lastCall = last ?: return s(R.string.say_no_missed_calls)
+            return s(R.string.say_no_missed_calls_last, lastCall.who, moment(time(lastCall.at), now))
+        }
+        val byCaller = missed.groupBy { it.number.filter(Char::isDigit).takeLast(9) }.values
+        val items = byCaller.map { calls ->
+            val latest = calls.first()
+            val at = moment(time(latest.at), now)
+            if (calls.size == 1) s(R.string.say_missed_call_item, latest.who, at) else s(R.string.say_missed_call_items, latest.who, calls.size, at)
+        }
+        val count = context.resources.getQuantityString(R.plurals.say_missed_calls, missed.size, missed.size)
+        return s(R.string.say_missed_calls, count, list(items))
+    }
+
+    private fun time(millis: Long): LocalDateTime = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(millis), ZoneId.systemDefault())
+
+    /** "today at 15:00", "yesterday at 9:12", "on Monday at 10:00", "on 3 March at 10:00". */
+    fun moment(at: LocalDateTime, now: LocalDateTime = LocalDateTime.now()): String {
+        val clock = TimeText.clock(context, at.hour, at.minute)
+        val days = ChronoUnit.DAYS.between(now.toLocalDate(), at.toLocalDate())
+        return when {
+            days == 0L -> s(R.string.moment_today, clock)
+            days == 1L -> s(R.string.moment_tomorrow, clock)
+            days == -1L -> s(R.string.moment_yesterday, clock)
+            days in -6..6 -> s(R.string.moment_day, at.dayOfWeek.getDisplayName(TextStyle.FULL, locale()), clock)
+            else -> s(R.string.moment_date, shortDate(at.toLocalDate(), now.toLocalDate()), clock)
+        }
+    }
+
+    // endregion
+
+    private fun locale(): Locale = context.resources.configuration.locales[0]
+
     private fun forConversion(c: UnitConverter.Conversion): String {
         val amount = c.formattedAmount()
         val result = c.formattedResult()
@@ -291,6 +518,12 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
     }
 
     private companion object {
+        const val LOW_BATTERY = 15
+        const val MAX_SENSE_CHARS = 200
+        const val MAX_EVENTS = 8
+
+        /** "The next few days" (see CommandParser). */
+        const val COMING_DAYS = 3
         const val RAINY_PERCENT = 50
         const val DRY_PERCENT = 10
         const val FEELS_LIKE_GAP = 3

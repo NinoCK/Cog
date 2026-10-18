@@ -129,7 +129,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** How a command reads in the results: what it will do, and where. */
-private data class CommandText(val icon: ImageVector, val title: String, val subtitle: String)
+internal data class CommandText(val icon: ImageVector, val title: String, val subtitle: String)
 
 @Composable
 private fun describe(command: Command, contact: Contact?): CommandText {
@@ -323,9 +323,14 @@ private fun describe(command: Command, contact: Contact?): CommandText {
             stringResource(R.string.cmd_message, contact?.name ?: command.who),
             command.body?.let { "“$it”" } ?: contact?.number.orEmpty(),
         )
+        is Command.DismissAlarm, is Command.SnoozeAlarm, Command.StopTimer, is Command.Chance, is Command.AddEvent,
+        is Command.Brightness, is Command.Ringer, is Command.Routine, is Command.CallBack,
+        -> describeMore(command)
         // Shown by their own rows (answers, weather card, Wikipedia card, app grid).
-        is Command.Convert, is Command.Clock, is Command.OpenApp, is Command.Weather, is Command.Lookup, is Command.NameDays, is Command.NameDay ->
-            CommandText(Icons.Rounded.Schedule, "", "")
+        is Command.Convert, is Command.Clock, is Command.OpenApp, is Command.Weather, is Command.Lookup, is Command.NameDays, is Command.NameDay,
+        is Command.Battery, is Command.DaysUntil, is Command.WhatDay, is Command.Currency, is Command.Define, is Command.Spell,
+        is Command.Agenda, Command.NextEvent, Command.MissedCalls,
+        -> CommandText(Icons.Rounded.Schedule, "", "")
     }
 }
 
@@ -355,6 +360,9 @@ internal fun CommandRow(
         is Command.Convert -> return ConversionRow(command, highlighted, topHitBounds, actions)
         is Command.Clock -> return ClockRow(command, highlighted, topHitBounds, actions)
         is Command.NameDays, is Command.NameDay -> return NameDayRow(command, highlighted, topHitBounds, actions)
+        is Command.Battery -> return BatteryRow(command, highlighted, topHitBounds, actions)
+        is Command.DaysUntil, is Command.WhatDay -> return DateRow(command, highlighted, topHitBounds, actions)
+        is Command.Spell -> return SpellRow(command, highlighted, topHitBounds, actions)
         else -> Unit
     }
     val colors = MaterialTheme.colorScheme
@@ -401,7 +409,7 @@ internal fun CommandRow(
 
 /** Small "read it to me" button for answer cards. */
 @Composable
-private fun ReadAloudButton(onClick: () -> Unit) {
+internal fun ReadAloudButton(onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
         Icon(
             Icons.Rounded.RecordVoiceOver,
@@ -414,7 +422,7 @@ private fun ReadAloudButton(onClick: () -> Unit) {
 
 /** Shared layout for inline answers: a small caption above a large value. Tap reads it out; copy is a button. */
 @Composable
-private fun AnswerValueRow(
+internal fun AnswerValueRow(
     icon: ImageVector,
     caption: String,
     value: String,
@@ -422,7 +430,8 @@ private fun AnswerValueRow(
     highlighted: Boolean,
     topHitBounds: BoundsHolder,
     onSpeak: () -> Unit,
-    onCopy: () -> Unit,
+    onCopy: (() -> Unit)?,
+    valueLines: Int = 1,
 ) {
     val colors = MaterialTheme.colorScheme
     ListRow(
@@ -431,8 +440,12 @@ private fun AnswerValueRow(
         onClick = onSpeak,
         leading = { IconBadge(icon, colors.primary, colors.onPrimary) },
         trailing = {
-            IconButton(onClick = onCopy) {
-                Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.action_copy))
+            if (onCopy != null) {
+                IconButton(onClick = onCopy) {
+                    Icon(Icons.Rounded.ContentCopy, contentDescription = stringResource(R.string.action_copy))
+                }
+            } else {
+                ReadAloudButton(onSpeak)
             }
         },
     ) {
@@ -443,7 +456,7 @@ private fun AnswerValueRow(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Medium,
                 color = colors.onSurface,
-                maxLines = 1,
+                maxLines = valueLines,
                 overflow = TextOverflow.Ellipsis,
             )
             footnote?.let {
@@ -780,6 +793,9 @@ internal fun ExamplesRow(onPick: (String) -> Unit) {
         R.string.example_home, R.string.example_timer, R.string.example_search, R.string.example_torch,
         R.string.example_time, R.string.example_convert, R.string.example_call, R.string.example_media,
         R.string.example_reminder, R.string.example_nameday, R.string.example_youtube, R.string.example_parking,
+        R.string.example_battery, R.string.example_calendar, R.string.example_add_event, R.string.example_days_until,
+        R.string.example_currency, R.string.example_define, R.string.example_coin, R.string.example_silent,
+        R.string.example_brightness, R.string.example_missed_calls,
     ).map { stringResource(it) }
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),

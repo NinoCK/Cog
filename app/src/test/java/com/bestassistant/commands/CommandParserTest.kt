@@ -241,7 +241,7 @@ class CommandParserTest {
         assertEquals(Command.Lookup("eiffel tower"), parse("what's the eiffel tower"))
         assertEquals(Command.Lookup("capital of australia"), parse("what is the capital of Australia"))
         assertEquals(Command.Lookup("lisbon"), parse("tell me about Lisbon"))
-        assertEquals(Command.Lookup("serendipity"), parse("what does serendipity mean"))
+        assertEquals(Command.Lookup("theory of relativity"), parse("tell me about the theory of relativity"))
         assertEquals(Command.Lookup("black holes"), parse("black holes wikipedia"))
         // Other parts of the assistant answer these.
         assertEquals(Command.Clock(null, null), parse("what time is it"))

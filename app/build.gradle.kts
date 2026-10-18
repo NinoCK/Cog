@@ -29,8 +29,8 @@ android {
         applicationId = "com.bestassistant.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
 
         ndk {
             // The wake word's native speech library: phones, plus x86_64 for the emulator.

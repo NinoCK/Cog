@@ -27,6 +27,17 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- After a restart, a one-tap reminder to resume the wake word -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Optional, requested the first time it's needed: "what's on my calendar today", "add dentist tomorrow at 3" -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <!-- Optional, requested the first time it's needed: "who called me", "call back" -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <!-- User-granted once ("Modify system settings"): "brightness 50%" -->
+    <uses-permission
+        android:name="android.permission.WRITE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- User-granted (Do Not Disturb access): "silent mode", "turn on do not disturb" -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <!-- The torch works without the camera; don't hide the app from devices without one. -->
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />

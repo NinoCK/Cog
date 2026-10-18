@@ -83,6 +83,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.bestassistant.commands.Command
 import com.fastsearch.R
+import com.fastsearch.assist.AgendaUi
+import com.fastsearch.assist.CallsUi
+import com.fastsearch.assist.CurrencyUi
+import com.fastsearch.assist.DefinitionUi
 import com.fastsearch.assist.SearchUiState
 import com.fastsearch.assist.TopHit
 import com.fastsearch.assist.WeatherUi
@@ -150,6 +154,22 @@ sealed interface ResultRow {
         override val key = "wiki"
     }
 
+    data class Currency(val command: Command.Currency, val ui: CurrencyUi) : ResultRow {
+        override val key = "currency"
+    }
+
+    data class Definition(val command: Command.Define, val ui: DefinitionUi) : ResultRow {
+        override val key = "definition"
+    }
+
+    data class Agenda(val command: Command, val ui: AgendaUi) : ResultRow {
+        override val key = "agenda"
+    }
+
+    data class Calls(val command: Command, val ui: CallsUi) : ResultRow {
+        override val key = "calls"
+    }
+
     data object Examples : ResultRow {
         override val key = "examples"
     }
@@ -171,6 +191,10 @@ fun buildRows(state: SearchUiState): List<ResultRow> = buildList {
     when {
         command is Command.Weather -> state.weather?.let { add(ResultRow.Weather(command, it)) }
         command is Command.Lookup -> state.wiki?.let { add(ResultRow.Wiki(command, it)) }
+        command is Command.Currency -> state.currency?.let { add(ResultRow.Currency(command, it)) }
+        command is Command.Define -> state.definition?.let { add(ResultRow.Definition(command, it)) }
+        command is Command.Agenda || command == Command.NextEvent -> state.agenda?.let { add(ResultRow.Agenda(command, it)) }
+        command == Command.MissedCalls -> state.calls?.let { add(ResultRow.Calls(command, it)) }
         command is Command.OpenApp -> Unit
         command != null && command.needsContact -> state.commandContact?.let { add(ResultRow.CommandItem(command, it)) }
         command != null -> add(ResultRow.CommandItem(command, null))
@@ -235,6 +259,10 @@ fun ResultRowContent(
         )
         is ResultRow.Weather -> WeatherCard(row.command, row.weather, actions)
         is ResultRow.Wiki -> WikiCard(row.command, row.wiki, actions)
+        is ResultRow.Currency -> CurrencyCard(row.command, row.ui, topHit is TopHit.Info, topHitBounds, actions)
+        is ResultRow.Definition -> DefinitionCard(row.command, row.ui, actions)
+        is ResultRow.Agenda -> AgendaCard(row.command, row.ui, actions)
+        is ResultRow.Calls -> CallsCard(row.command, row.ui, actions)
         ResultRow.Examples -> ExamplesRow(onPick = { textState.setTextAndPlaceCursorAtEnd(it) })
     }
 }

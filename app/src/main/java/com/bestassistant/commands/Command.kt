@@ -19,6 +19,63 @@ sealed interface Command {
     data class SetTimer(val seconds: Int, val label: String? = null) : Command
     data object ShowTimers : Command
 
+    /** "cancel my 7am alarm", "cancel all alarms", "stop the alarm": through the clock app's own "dismiss". */
+    data class DismissAlarm(val target: AlarmTarget) : Command
+
+    /** "snooze", "snooze for 10 minutes": the alarm that is ringing. */
+    data class SnoozeAlarm(val minutes: Int? = null) : Command
+
+    /** "stop the timer": the timer that is ringing. */
+    data object StopTimer : Command
+
+    /** "how much battery do I have"; [charging]: "is my phone charging". */
+    data class Battery(val charging: Boolean = false) : Command
+
+    /**
+     * "how many days until Christmas": [date] is the next [name] (or, [since], the last one); [name] null: a
+     * plain date. [weeks]: the user asked in weeks.
+     */
+    data class DaysUntil(val date: LocalDate, val name: String?, val since: Boolean = false, val weeks: Boolean = false) : Command
+
+    /** "what day is March 3rd": the weekday of [date]. */
+    data class WhatDay(val date: LocalDate, val name: String?) : Command
+
+    /** "flip a coin", "roll a dice", "pick a number from 1 to 10": decided when it runs. */
+    data class Chance(val kind: ChanceKind) : Command
+
+    /** "100 dollars in euros": with the European Central Bank's reference rates. Currencies are ISO codes. */
+    data class Currency(val amount: Double, val from: String, val to: String) : Command
+
+    /** "define serendipity": from Wiktionary. */
+    data class Define(val word: String) : Command
+
+    /** "how do you spell necessary": letter by letter. */
+    data class Spell(val word: String) : Command
+
+    /** "what's on my calendar today": the events of [days] days from [from]. */
+    data class Agenda(val from: LocalDate, val days: Int = 1) : Command
+
+    /** "what's my next meeting". */
+    data object NextEvent : Command
+
+    /** "add dentist tomorrow at 3": [title] or [time] null when the user didn't say; PocketSearch asks. */
+    data class AddEvent(val title: String?, val time: EventTime?, val minutes: Int? = null) : Command
+
+    /** "brightness 50%", "dim the screen". */
+    data class Brightness(val change: BrightnessChange) : Command
+
+    /** "silent mode", "vibrate", "ringer on". */
+    data class Ringer(val mode: RingerMode) : Command
+
+    /** "good morning": a routine the user set up in settings, by its [name]. */
+    data class Routine(val name: String) : Command
+
+    /** "who called me": the missed calls. */
+    data object MissedCalls : Command
+
+    /** "call back" (the last missed call), "redial" ([redial]: the last number called). */
+    data class CallBack(val redial: Boolean = false) : Command
+
     data class Flashlight(val state: Switch) : Command
     data class Volume(val change: VolumeChange) : Command
     data class Media(val action: MediaAction) : Command
@@ -112,8 +169,8 @@ sealed interface Command {
     /** Commands that do something on their own when the user presses Enter. */
     val isSelfContained: Boolean
         get() = when (this) {
-            is Call, is Message, is ShareLocation, is OpenApp, is Weather, is Clock, is Convert, is Lookup, is NameDays, is NameDay -> false
-            else -> true
+            is Call, is Message, is ShareLocation, is OpenApp -> false
+            else -> !isInformation
         }
 
     /** Commands that are only meaningful once a contact has been found for them. */
@@ -127,11 +184,65 @@ sealed interface Command {
 
     /** Answers shown on screen and read out on Enter (rather than an action). */
     val isInformation: Boolean
-        get() = this is Weather || this is Clock || this is Convert || this is Lookup || this is NameDays || this is NameDay
+        get() = when (this) {
+            is Weather, is Clock, is Convert, is Lookup, is NameDays, is NameDay, is Battery, is DaysUntil, is WhatDay,
+            is Currency, is Define, is Spell, is Agenda, NextEvent, MissedCalls,
+            -> true
+            else -> false
+        }
 
     /** Commands that need to know where the phone is: they ask for location access first. */
     val needsLocation: Boolean get() = this is SaveParking || this is ShareLocation
+
+    /** Commands that read the calendar; [AddEvent] also writes to it. */
+    val needsCalendar: Boolean get() = this is Agenda || this == NextEvent || this is AddEvent
+
+    /** Commands that read the call history. */
+    val needsCallLog: Boolean get() = this == MissedCalls || this is CallBack
 }
+
+/** Which alarm "cancel my alarm" means. */
+sealed interface AlarmTarget {
+    /** The one that is ringing ("stop the alarm"). */
+    data object Ringing : AlarmTarget
+
+    /** The next one to ring ("cancel my next alarm"). */
+    data object Next : AlarmTarget
+
+    data object All : AlarmTarget
+
+    /** "my 7am alarm": [hour] in 24-hour time when [pm] is known, else as said (1 to 12). */
+    data class At(val hour: Int, val minute: Int, val pm: Boolean?) : AlarmTarget
+
+    /** "my gym alarm". */
+    data class Labeled(val label: String) : AlarmTarget
+}
+
+/** What a [Command.Chance] decides. */
+sealed interface ChanceKind {
+    data object Coin : ChanceKind
+    data class Dice(val count: Int = 1, val sides: Int = 6) : ChanceKind
+    data class Number(val min: Int, val max: Int) : ChanceKind
+}
+
+/** When a calendar event is: [At] a time, or a whole day ([AllDay]). */
+sealed interface EventTime {
+    val date: LocalDate
+
+    data class At(override val date: LocalDate, val hour: Int, val minute: Int) : EventTime
+    data class AllDay(override val date: LocalDate) : EventTime
+}
+
+sealed interface BrightnessChange {
+    data object Up : BrightnessChange
+    data object Down : BrightnessChange
+    data class Set(val percent: Int) : BrightnessChange
+
+    /** Adaptive brightness on or off. */
+    data class Auto(val on: Boolean) : BrightnessChange
+}
+
+enum class RingerMode { NORMAL, VIBRATE, SILENT }
 
 /** When a reminder goes off: [After] a while, or [At] a time on a day. */
 sealed interface ReminderTime {

@@ -1,5 +1,6 @@
 package com.bestassistant.device
 
+import android.app.NotificationManager
 import android.app.SearchManager
 import android.content.Context
 import android.content.Intent
@@ -16,9 +17,16 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
+import com.bestassistant.calendar.CalendarStore
+import com.bestassistant.commands.AlarmTarget
+import com.bestassistant.commands.BrightnessChange
+import com.bestassistant.commands.ChanceKind
 import com.bestassistant.commands.Command
 import com.bestassistant.commands.CommandParser
+import com.bestassistant.commands.EventTime
 import com.bestassistant.commands.NavigationApp
+import com.bestassistant.commands.RingerMode
+import com.bestassistant.phone.CallHistory
 import com.bestassistant.commands.ReminderTime
 import com.bestassistant.commands.SavedPlace
 import com.bestassistant.commands.MediaAction
@@ -62,6 +70,8 @@ class CommandRunner(
     private val location: DeviceLocation,
     private val reminders: Reminders,
     private val parking: Parking,
+    private val calendar: CalendarStore,
+    private val calls: CallHistory,
 ) {
 
     private fun s(id: Int, vararg args: Any): String = strings().getString(id, *args)
@@ -91,6 +101,23 @@ class CommandRunner(
         )
         Command.ShowAlarms -> Step.Launch(listOf(Intent(AlarmClock.ACTION_SHOW_ALARMS)))
         Command.ShowTimers -> Step.Launch(listOf(Intent(AlarmClock.ACTION_SHOW_TIMERS), Intent(AlarmClock.ACTION_SHOW_ALARMS)))
+        is Command.DismissAlarm -> dismissAlarm(command.target)
+        is Command.SnoozeAlarm -> Step.Launch(
+            listOf(Intent(AlarmClock.ACTION_SNOOZE_ALARM).apply { command.minutes?.let { putExtra(AlarmClock.EXTRA_ALARM_SNOOZE_DURATION, it) } }),
+            s(R.string.done_snooze),
+        )
+        // Only a ringing timer can be stopped from outside the clock app; otherwise its timers screen.
+        Command.StopTimer -> Step.Launch(
+            listOf(Intent(AlarmClock.ACTION_DISMISS_TIMER), Intent(AlarmClock.ACTION_SHOW_TIMERS)),
+            s(R.string.done_timer_stopped),
+        )
+        is Command.Chance -> chance(command.kind)
+        is Command.Brightness -> brightness(command.change)
+        is Command.Ringer -> ringer(command.mode)
+        is Command.AddEvent -> addEvent(command)
+        is Command.CallBack -> callBack(command)
+        // Run by the overlay, step by step.
+        is Command.Routine -> Step.Done(null)
         is Command.Flashlight -> flashlight(command.state)
         is Command.Volume -> volume(command.change)
         is Command.Media -> media(command.action)
@@ -123,7 +150,7 @@ class CommandRunner(
                 Intent(if (command.video) MediaStore.ACTION_VIDEO_CAPTURE else MediaStore.ACTION_IMAGE_CAPTURE),
             ),
         )
-        is Command.OpenPanel -> Step.Launch(panelIntents(command.panel))
+        is Command.OpenPanel -> doNotDisturb(command) ?: Step.Launch(panelIntents(command.panel))
         is Command.DialNumber -> Step.Launch(listOf(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", command.number, null))))
         is Command.Call -> contact?.number?.let { number ->
             Step.Launch(listOf(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null))))
@@ -143,9 +170,214 @@ class CommandRunner(
         is Command.Repeat -> withPlayer { media.repeat(command.on); Step.Done(null) }
         // Shown inline or launched as an app result: nothing to run here.
         is Command.OpenApp, is Command.Weather, is Command.Clock, is Command.Convert, is Command.Lookup,
-        is Command.NameDays, is Command.NameDay,
+        is Command.NameDays, is Command.NameDay, is Command.Battery, is Command.DaysUntil, is Command.WhatDay,
+        is Command.Currency, is Command.Define, is Command.Spell, is Command.Agenda, Command.NextEvent, Command.MissedCalls,
         -> Step.Done(null)
     }
+
+    // region Clock, chance
+
+    /** The clock app's own "dismiss": it finds the alarm (or asks which one) and turns it off. */
+    private fun dismissAlarm(target: AlarmTarget): Step {
+        val intent = Intent(AlarmClock.ACTION_DISMISS_ALARM)
+        val confirmation = when (target) {
+            AlarmTarget.Ringing -> s(R.string.done_alarm_dismissed)
+            AlarmTarget.Next -> {
+                intent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_NEXT)
+                s(R.string.done_alarm_next_off)
+            }
+            AlarmTarget.All -> {
+                intent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_ALL)
+                s(R.string.done_alarms_off)
+            }
+            is AlarmTarget.At -> {
+                intent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_TIME)
+                    .putExtra(AlarmClock.EXTRA_HOUR, target.hour)
+                    .putExtra(AlarmClock.EXTRA_MINUTES, target.minute)
+                target.pm?.let { intent.putExtra(AlarmClock.EXTRA_IS_PM, it) }
+                s(R.string.done_alarm_off, alarmTime(target))
+            }
+            is AlarmTarget.Labeled -> {
+                intent.putExtra(AlarmClock.EXTRA_ALARM_SEARCH_MODE, AlarmClock.ALARM_SEARCH_MODE_LABEL)
+                    .putExtra(AlarmClock.EXTRA_MESSAGE, target.label)
+                s(R.string.done_alarm_off, target.label)
+            }
+        }
+        return Step.Launch(listOf(intent), confirmation)
+    }
+
+    /** "7:00 PM", or "7:00" when the user didn't say which. */
+    fun alarmTime(target: AlarmTarget.At): String =
+        if (target.pm == null) String.format(Locale.ROOT, "%d:%02d", target.hour, target.minute) else TimeText.clock(context, target.hour, target.minute)
+
+    private fun chance(kind: ChanceKind): Step {
+        val random = kotlin.random.Random.Default
+        val (shown, said) = when (kind) {
+            ChanceKind.Coin -> {
+                val heads = random.nextBoolean()
+                s(if (heads) R.string.coin_heads else R.string.coin_tails) to s(if (heads) R.string.say_coin_heads else R.string.say_coin_tails)
+            }
+            is ChanceKind.Dice -> {
+                val rolls = List(kind.count) { random.nextInt(1, kind.sides + 1) }
+                val total = rolls.sum()
+                val shown = if (rolls.size == 1) "$total" else rolls.joinToString(" + ") + " = $total"
+                shown to if (rolls.size == 1) {
+                    s(R.string.say_dice, total)
+                } else {
+                    s(R.string.say_dice_many, list(rolls.map(Int::toString)), total)
+                }
+            }
+            is ChanceKind.Number -> {
+                val number = random.nextInt(kind.min, kind.max + 1)
+                "$number" to s(R.string.say_number, number)
+            }
+        }
+        return Step.Done(shown, spoken = said)
+    }
+
+    private fun list(items: List<String>): String =
+        if (items.size == 1) items[0] else items.dropLast(1).joinToString(", ") + " ${s(R.string.say_and)} " + items.last()
+
+    // endregion
+
+    // region Phone settings
+
+    /**
+     * The brightness slider, through "Modify system settings". Without that permission yet, its
+     * settings screen opens so the user can grant it once.
+     */
+    private fun brightness(change: BrightnessChange): Step {
+        if (!Brightness.canChange(context)) {
+            return Step.Launch(listOf(Brightness.permissionIntent(context)), spoken = s(R.string.say_brightness_permission))
+        }
+        if (change is BrightnessChange.Auto) {
+            if (!Brightness.setAdaptive(context, change.on)) return Step.Failed(s(R.string.error_brightness))
+            val said = s(if (change.on) R.string.say_brightness_auto_on else R.string.say_brightness_auto_off)
+            return Step.Done(said, spoken = said)
+        }
+        val current = Brightness.percent(context) ?: 50
+        val target = when (change) {
+            BrightnessChange.Up -> (current + Brightness.STEP).coerceAtMost(100)
+            BrightnessChange.Down -> (current - Brightness.STEP).coerceAtLeast(0)
+            is BrightnessChange.Set -> change.percent
+            is BrightnessChange.Auto -> current
+        }
+        val wasAdaptive = Brightness.set(context, target) ?: return Step.Failed(s(R.string.error_brightness))
+        val said = listOfNotNull(
+            s(R.string.say_brightness, target),
+            if (wasAdaptive) s(R.string.say_brightness_adaptive_off) else null,
+        ).joinToString(" ")
+        return Step.Done(s(R.string.done_brightness, target), spoken = said)
+    }
+
+    private val notifications = context.getSystemService(NotificationManager::class.java)
+
+    /**
+     * Silent, vibrate or ring. Android lets apps with Do Not Disturb access (which media control
+     * already gives) switch to silent; without it, that permission's screen opens.
+     */
+    private fun ringer(mode: RingerMode): Step {
+        val wanted = when (mode) {
+            RingerMode.NORMAL -> AudioManager.RINGER_MODE_NORMAL
+            RingerMode.VIBRATE -> AudioManager.RINGER_MODE_VIBRATE
+            RingerMode.SILENT -> AudioManager.RINGER_MODE_SILENT
+        }
+        val changed = runCatching { audio.ringerMode = wanted }.isSuccess && audio.ringerMode == wanted
+        if (!changed) {
+            return Step.Launch(listOf(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)), spoken = s(R.string.say_ringer_permission))
+        }
+        val said = s(
+            when (mode) {
+                RingerMode.NORMAL -> R.string.say_ringer_normal
+                RingerMode.VIBRATE -> R.string.say_ringer_vibrate
+                RingerMode.SILENT -> R.string.say_ringer_silent
+            },
+        )
+        return Step.Done(said, spoken = said)
+    }
+
+    /** "Turn on do not disturb": switched directly when PocketSearch has Do Not Disturb access; null opens the switch instead. */
+    private fun doNotDisturb(command: Command.OpenPanel): Step? {
+        if (command.panel != SettingsPanel.DND || command.requested == null) return null
+        if (!notifications.isNotificationPolicyAccessGranted) return null
+        val on = when (command.requested) {
+            Switch.ON -> true
+            Switch.OFF -> false
+            Switch.TOGGLE -> notifications.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL
+        }
+        val filter = if (on) NotificationManager.INTERRUPTION_FILTER_PRIORITY else NotificationManager.INTERRUPTION_FILTER_ALL
+        if (runCatching { notifications.setInterruptionFilter(filter) }.isFailure) return null
+        val said = s(if (on) R.string.say_dnd_on else R.string.say_dnd_off)
+        return Step.Done(said, spoken = said)
+    }
+
+    // endregion
+
+    // region Calendar and calls
+
+    /**
+     * Adds the event to the user's main calendar, or asks what's missing ("What is it called?",
+     * "When is it?"). Without calendar access, the calendar app's own new-event screen opens filled in.
+     */
+    private fun addEvent(command: Command.AddEvent): Step {
+        val title = command.title ?: return Step.Ask(s(R.string.ask_event_what)) { answer ->
+            when {
+                isCancel(answer) -> cancelledEvent()
+                else -> addEvent(command.copy(title = answer.trim().replaceFirstChar { it.titlecase(locale()) }))
+            }
+        }
+        val time = command.time ?: return Step.Ask(s(R.string.ask_event_when)) { answer ->
+            val at = CommandParser.eventTime(answer)
+            when {
+                at != null -> addEvent(command.copy(time = at))
+                isCancel(answer) -> cancelledEvent()
+                CommandParser.parse(answer) != null -> null
+                else -> Step.Failed(s(R.string.error_event_time))
+            }
+        }
+        val minutes = command.minutes ?: DEFAULT_EVENT_MINUTES
+        val start = (time as? EventTime.At)?.let { it.date.atTime(it.hour, it.minute) }
+        val day = (time as? EventTime.AllDay)?.date
+        val whenText = eventWhen(time)
+        if (!calendar.canWrite()) {
+            return Step.Launch(listOf(calendar.insertIntent(title, start, day, minutes)), spoken = s(R.string.say_event_editor, title, whenText))
+        }
+        calendar.add(title, start, day, minutes)
+            ?: return Step.Launch(listOf(calendar.insertIntent(title, start, day, minutes)), spoken = s(R.string.say_event_editor, title, whenText))
+        return Step.Done(s(R.string.done_event, title), spoken = s(R.string.say_event_added, title, whenText))
+    }
+
+    private fun cancelledEvent(): Step = s(R.string.say_event_cancelled).let { Step.Done(it, spoken = it) }
+
+    /** "tomorrow at 15:00", "on Friday", "on 3 March at 10:00". */
+    fun eventWhen(time: EventTime): String {
+        val now = LocalDateTime.now()
+        return when (time) {
+            is EventTime.At -> reminderWhen(null, time.date.atTime(time.hour, time.minute), now)
+            is EventTime.AllDay -> {
+                val days = ChronoUnit.DAYS.between(now.toLocalDate(), time.date)
+                when {
+                    days == 0L -> s(R.string.day_today)
+                    days == 1L -> s(R.string.day_tomorrow)
+                    days in 2..6 -> s(R.string.day_on, strings().resources.getStringArray(R.array.reminder_weekdays)[time.date.dayOfWeek.value - 1])
+                    else -> s(R.string.day_on, time.date.format(DateTimeFormatter.ofPattern("d MMMM", locale())))
+                }
+            }
+        }
+    }
+
+    /** Dials the last missed call (or the last one that came in), or with "redial" the last number called. */
+    private fun callBack(command: Command.CallBack): Step {
+        if (!calls.canRead()) return Step.Failed(s(R.string.error_call_log_permission))
+        val call = (if (command.redial) calls.lastOutgoing() else calls.toCallBack())
+            ?: return Step.Failed(s(if (command.redial) R.string.error_no_outgoing else R.string.error_no_calls))
+        return Step.Launch(
+            listOf(Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", call.number, null))),
+            spoken = s(if (command.redial) R.string.say_redial else R.string.say_call_back, call.who),
+        )
+    }
+
+    // endregion
 
     /** YouTube's own search, or its results page (which the app opens too). */
     private fun youTubeSearch(query: String) = listOf(
@@ -527,6 +759,9 @@ class CommandRunner(
 
         /** "Never mind" in answer to "When should I remind you?". */
         val CANCEL_WORDS = setOf("cancel", "never mind", "nevermind", "forget it", "no", "nothing", "stop")
+
+        /** How long an event lasts when the user didn't say. */
+        const val DEFAULT_EVENT_MINUTES = 60
 
 
         /** What Spotify and most players call the user's likes, for "search and play". */

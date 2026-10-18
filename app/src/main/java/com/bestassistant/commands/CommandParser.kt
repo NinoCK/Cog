@@ -23,34 +23,54 @@ object CommandParser {
     @Volatile
     var integrations: List<Installed> = emptyList()
 
+    /** A routine the user set up: what it's called, and the [phrases] that run it (already [normalize]d). */
+    class RoutineTrigger(val name: String, val phrases: Set<String>)
+
+    /** The user's routines; their phrases come before everything else. Kept up to date by the app. */
+    @Volatile
+    var routines: List<RoutineTrigger> = emptyList()
+
     fun parse(input: String, now: LocalDateTime = LocalDateTime.now()): Command? {
         val text = normalize(input)
         if (text.isEmpty() || text.length > MAX_LENGTH) return null
-        return youTube(text)
+        return routine(text)
+            ?: youTube(text)
             ?: reminder(text, now)
             ?: parking(text)
             ?: shareLocation(text)
+            ?: currency(text)
             ?: conversion(text)
+            ?: clockControls(text)
             ?: timer(text)
             ?: alarm(text, now)
+            ?: calendar(text, now)
             ?: flashlight(text)
             ?: volume(text)
+            ?: phoneSettings(text)
+            ?: battery(text)
             ?: media(text)
             ?: integration(text, Slot.EARLY)
+            ?: chance(text)
             ?: music(text)
             ?: weather(text)
             ?: clock(text)
+            ?: dates(text, now)
             ?: nameDays(text, now)
+            ?: calls(text)
             ?: camera(text)
             ?: navigate(text)
             ?: call(text)
             ?: message(text)
             ?: panel(text)
+            ?: dictionary(text)
             ?: integration(text, Slot.LATE)
             ?: webSearch(text)
             ?: lookup(text)
             ?: openApp(text)
     }
+
+    private fun routine(text: String): Command? =
+        routines.firstOrNull { text in it.phrases }?.let { Command.Routine(it.name) }
 
     // region Normalisation
 
@@ -179,6 +199,183 @@ object CommandParser {
         return null
     }
 
+    private val alarmControl = Regex(
+        "^(stop|dismiss|silence|shut off|shut up|turn off|switch off|cancel|delete|remove|disable|skip|clear|get rid of)" +
+            "(?: (.*?))? alarms?(?: clock)?(?: (?:for|at|set for) (.+))?$",
+    )
+    private val ringingVerbs = setOf("stop", "dismiss", "silence", "shut off", "shut up", "turn off", "switch off")
+    private val alarmDeterminers = setOf(
+        "the", "my", "this", "that", "a", "an", "of", "set", "for", "at", "tomorrow", "tomorrow's", "tonight", "tonight's", "today",
+        "today's", "morning", "ringing", "current", "wake", "up",
+    )
+    private val snooze = Regex("^snooze(?: (?:the|my|this|that|it))?(?: alarm)?(?: (?:for |by )?(.+))?$")
+    private val stopTimer = Regex(
+        "^(?:stop|dismiss|silence|cancel|turn off|switch off|end|shut off|kill|delete|remove|clear)" +
+            "(?: the| my| this| that| all| all the| all my| all of my)? (?:timers?|countdowns?)(?: that's ringing| ringing)?$",
+    )
+
+    /** "cancel my 7am alarm", "stop the alarm", "snooze for 5 minutes", "stop the timer". */
+    private fun clockControls(text: String): Command? {
+        if (stopTimer.matches(text)) return Command.StopTimer
+        snooze.matchEntire(text)?.let { m ->
+            val rest = m.groupValues[1]
+            if (rest.isEmpty()) return Command.SnoozeAlarm()
+            val seconds = Spoken.duration(rest, bareNumberUnit = 60) ?: return null
+            return Command.SnoozeAlarm((seconds / 60).coerceIn(1, MAX_SNOOZE_MINUTES))
+        }
+        val m = alarmControl.matchEntire(text) ?: return null
+        val verb = m.groupValues[1]
+        val words = words("${m.groupValues[2]} ${m.groupValues[3]}")
+        val meridiem = when {
+            morning.containsMatchIn(text) -> Spoken.Meridiem.AM
+            evening.containsMatchIn(text) -> Spoken.Meridiem.PM
+            else -> null
+        }
+        val rest = words.filter { it !in alarmDeterminers && it !in setOf("in", "evening", "afternoon", "night", "tonight") }
+        val target = when {
+            "all" in rest || "every" in rest -> AlarmTarget.All
+            "next" in rest || "upcoming" in rest -> AlarmTarget.Next
+            rest.isEmpty() -> if (verb in ringingVerbs) AlarmTarget.Ringing else AlarmTarget.Next
+            else -> {
+                val time = Spoken.clock(rest.joinToString(" "))
+                when {
+                    time == null -> AlarmTarget.Labeled(rest.joinToString(" "))
+                    time.meridiem == null && meridiem != null && time.hour in 1..12 -> {
+                        val hour = if (meridiem == Spoken.Meridiem.PM) time.hour % 12 + 12 else time.hour % 12
+                        AlarmTarget.At(hour, time.minute, meridiem == Spoken.Meridiem.PM)
+                    }
+                    time.meridiem == null -> AlarmTarget.At(time.hour, time.minute, null)
+                    else -> {
+                        val pm = time.meridiem == Spoken.Meridiem.PM
+                        AlarmTarget.At(if (pm) time.hour % 12 + 12 else time.hour % 12, time.minute, pm)
+                    }
+                }
+            }
+        }
+        return Command.DismissAlarm(target)
+    }
+
+    // endregion
+
+    // region Calendar
+
+    private val agendaAsk = Regex(
+        "^(?:what(?:'s| is) (?:on )?|show(?: me)? |read(?: me)? |check |tell me |list |what does |how does |how's |how is )?" +
+            "(?:my |the )(?:calendar|schedule|agenda|diary)(?: (?:look|looks) like)?(?: (?:for|on|like))?(?: (.+))?$",
+    )
+    private val agendaQuestion = Regex(
+        "^(?:what (?:do|did) i have|what have i got|what am i doing|what are my plans|what plans do i have|" +
+            "do i have (?:anything|any plans|plans)|is there anything|have i got anything|am i (?:free|busy|available))" +
+            "(?: (?:on|planned|scheduled|booked|going on))?(?: (.+?))?(?: on my calendar| in my calendar)?$",
+    )
+    private val agendaMeetings = Regex(
+        "^(?:do i have|have i got|are there) (?:any )?(?:meetings|events|appointments)(?: (?:on|planned|scheduled))?(?: (.+?))?(?: on my calendar)?$",
+    )
+    private val dayLooks = Regex("^(?:what does|how does|how's|how is) (?:my day|(.+?)) (?:look|looks|looking)(?: like)?$")
+    private val nextEvent = Regex(
+        "^(?:(?:what(?:'s| is)|when(?:'s| is)|where(?:'s| is)|tell me|show me|read me)(?: my| the)? )?next " +
+            "(?:meeting|event|appointment|calendar event|thing on my calendar)$|^what(?:'s| is) next on my (?:calendar|schedule|agenda)$|" +
+            "^what do i have next$",
+    )
+
+    private val eventLead = Regex(
+        "^(?:(add|put|schedule|pencil in|block out|block)|(create|make|set up|new|plan|book|organise|organize|arrange))" +
+            "(?: (?:a|an|the|my))?(?: new)?(?: (calendar event|calendar entry|event|appointment|meeting|entry))?" +
+            "(?: (?:called|named|titled|about|with the title))?(?: (.+))?$",
+    )
+    private val calendarMention = Regex("(?:^| )(?:to|in|on|into|onto|for) (?:my |the )?(?:calendar|diary|agenda|schedule)(?: |$)")
+    private val titleFillers = setOf("a", "an", "the", "my", "to", "for", "about", "called", "named", "on", "at", "and", "in", "from")
+
+    private fun calendar(text: String, now: LocalDateTime): Command? {
+        val today = now.toLocalDate()
+        if (nextEvent.matches(text)) return Command.NextEvent
+        agendaAsk.matchEntire(text)?.let { m -> return agenda(m.groupValues[1], today, required = false) }
+        agendaMeetings.matchEntire(text)?.let { m -> return agenda(m.groupValues[1], today, required = false) }
+        agendaQuestion.matchEntire(text)?.let { m -> return agenda(m.groupValues[1], today, required = true) }
+        dayLooks.matchEntire(text)?.let { m -> return agenda(m.groupValues[1], today, required = m.groupValues[1].isNotEmpty()) }
+        if (text in setOf("my calendar", "my schedule", "my agenda", "my day")) return Command.Agenda(today)
+        return addEvent(text, now)
+    }
+
+    /** What days "today", "tomorrow", "on friday", "this week" are; null when [spec] says no day (and one is [required]). */
+    private fun agenda(rawSpec: String, today: LocalDate, required: Boolean): Command.Agenda? {
+        val spec = rawSpec.trim().removePrefix("for ").removePrefix("on ").removePrefix("like ").trim()
+        if (spec.isEmpty()) return if (required) null else Command.Agenda(today)
+        val untilSunday = DayOfWeek.SUNDAY.value - today.dayOfWeek.value + 1
+        return when (spec) {
+            "today", "this morning", "this afternoon", "this evening", "tonight", "now", "right now" -> Command.Agenda(today)
+            "this week", "the week", "the rest of the week", "the rest of this week", "this week so far" -> Command.Agenda(today, untilSunday)
+            "next week" -> Command.Agenda(today.plusDays(untilSunday.toLong()), 7)
+            "this weekend", "the weekend", "weekend" -> when (today.dayOfWeek) {
+                DayOfWeek.SATURDAY -> Command.Agenda(today, 2)
+                DayOfWeek.SUNDAY -> Command.Agenda(today, 1)
+                else -> Command.Agenda(today.with(java.time.temporal.TemporalAdjusters.next(DayOfWeek.SATURDAY)), 2)
+            }
+            "the next few days", "next few days", "the coming days" -> Command.Agenda(today, 3)
+            else -> {
+                val day = Dates.named(spec, today)?.resolve(today) ?: return null
+                if (day.isBefore(today.minusDays(1))) null else Command.Agenda(day)
+            }
+        }
+    }
+
+    /** "add dentist tomorrow at 3", "schedule lunch with mom on friday at 1", "create an event". */
+    private fun addEvent(text: String, now: LocalDateTime): Command.AddEvent? {
+        val m = eventLead.matchEntire(text) ?: return null
+        // "add" and "schedule" with a time are events; "put the heating on at 6" is the house's.
+        val plainVerb = m.groupValues[1] in setOf("add", "schedule", "pencil in")
+        val kind = m.groupValues[3]
+        var rest = " ${m.groupValues[4]} "
+        val mentioned = calendarMention.containsMatchIn(rest) || kind.startsWith("calendar")
+        rest = rest.replace(calendarMention, " ")
+        val words = words(rest).toMutableList()
+        val minutes = cutDuration(words)
+        val time = eventTime(words, now)
+        // "create", "make" and "book" need to say it's an event: "book a table for 4 at 8" isn't one.
+        if (!plainVerb && kind.isEmpty() && !mentioned) return null
+        if (plainVerb && !mentioned && time == null && kind.isEmpty()) return null
+        while (words.isNotEmpty() && words.first() in titleFillers) words.removeAt(0)
+        while (words.isNotEmpty() && words.last() in titleFillers) words.removeAt(words.lastIndex)
+        // A meeting or appointment is part of what it's called: "meeting with alex".
+        if (kind == "meeting" || kind == "appointment") words.add(0, kind)
+        val title = words.joinToString(" ").replaceFirstChar { it.titlecase(Locale.ROOT) }.takeIf { it.isNotEmpty() }
+        return Command.AddEvent(title, time, minutes)
+    }
+
+    /** "for an hour", "for 30 minutes": how long the event lasts, removed from [words]. */
+    private fun cutDuration(words: MutableList<String>): Int? {
+        for (i in words.indices) {
+            if (words[i] != "for") continue
+            for (end in minOf(words.size, i + 6) downTo i + 2) {
+                val seconds = Spoken.duration(words.subList(i + 1, end).joinToString(" ")) ?: continue
+                repeat(end - i) { words.removeAt(i) }
+                return (seconds / 60).coerceIn(1, MAX_EVENT_MINUTES)
+            }
+        }
+        return null
+    }
+
+    /** When an event is: a time on a day, or (with only a day) the whole day. */
+    private fun eventTime(words: MutableList<String>, now: LocalDateTime): EventTime? {
+        val parts = whenParts(words, now)
+        if (parts.after == null && parts.clock == null && parts.part == null) return parts.day?.let { EventTime.AllDay(it) }
+        return when (val at = ReminderTimes.build(now, parts.after, parts.day, parts.clock, parts.part)) {
+            is ReminderTime.At -> EventTime.At(at.date, at.hour, at.minute)
+            is ReminderTime.After -> now.plusSeconds(at.seconds.toLong()).let { EventTime.At(it.toLocalDate(), it.hour, it.minute) }
+            null -> null
+        }
+    }
+
+    /** The answer to "When is it?": "tomorrow at 3", "on friday", "at 5". */
+    fun eventTime(answer: String, now: LocalDateTime = LocalDateTime.now()): EventTime? {
+        val text = normalize(answer)
+        Spoken.clock(text.removePrefix("at "))?.let { clock ->
+            val at = ReminderTimes.build(now, null, null, clock, null) as? ReminderTime.At ?: return null
+            return EventTime.At(at.date, at.hour, at.minute)
+        }
+        return eventTime(words(text).toMutableList(), now)
+    }
+
     // endregion
 
     // region Reminders
@@ -215,6 +412,15 @@ object CommandParser {
 
     /** Finds and removes the words that say when ("in 20 minutes", "tomorrow at 9"), leaving what to remind of. */
     private fun reminderTime(words: MutableList<String>, now: LocalDateTime): ReminderTime? {
+        val parts = whenParts(words, now)
+        return ReminderTimes.build(now, parts.after, parts.day, parts.clock, parts.part)
+    }
+
+    /** The pieces of a "when": [after] seconds from now, or a [day] with a [clock] time or a [part] of the day. */
+    private class WhenParts(val after: Int?, val day: LocalDate?, val clock: Spoken.ClockTime?, val part: DayPart?)
+
+    /** Finds and removes the words that say when ("in 20 minutes", "tomorrow at 9", "on March 3rd"). */
+    private fun whenParts(words: MutableList<String>, now: LocalDateTime): WhenParts {
         val today = now.toLocalDate()
         var part: DayPart? = null
         var day: LocalDate? = null
@@ -247,6 +453,8 @@ object CommandParser {
                 break
             }
         }
+        // "on March 3rd", "the 3rd of March", "on Christmas Eve".
+        if (day == null) day = Dates.cut(words, today)
 
         // "set a reminder for 10 minutes", before "for 10" can read as 10 o'clock.
         if (after == null && words.firstOrNull() == "for") {
@@ -255,7 +463,7 @@ object CommandParser {
             }
         }
         val clock = if (after == null) clockIn(words) else null
-        return ReminderTimes.build(now, after, day, clock, part)
+        return WhenParts(after, day, clock, part)
     }
 
     /** "in 20 minutes", "in an hour and a half", "20 minutes from now", "in 3 days": seconds from now. */
@@ -498,6 +706,128 @@ object CommandParser {
         return Command.Volume(change)
     }
 
+    private val brightnessSet = Regex(
+        "^(?:set |turn |change |put |make |adjust )?(?:the )?(?:screen |display |phone )?brightness (?:to |at |level to |up to |down to )?(\\d{1,3})(?: ?%| percent)?$|" +
+            "^(\\d{1,3})(?: ?%| percent) brightness$",
+    )
+    private val brightnessWords = Regex(
+        "^(?:set |turn |change |put )?(?:the )?(?:screen |display )?brightness (?:to |at |all the way )?(max|maximum|full|highest|min|minimum|lowest|half|zero|up all the way)$|" +
+            "^(max|maximum|full|highest|min|minimum|lowest) (?:screen )?brightness$",
+    )
+    private val brightnessUp = setOf(
+        "brightness up", "increase brightness", "increase the brightness", "turn up the brightness", "turn the brightness up",
+        "turn brightness up", "raise the brightness", "raise brightness", "brighter", "make it brighter", "make the screen brighter",
+        "screen brighter", "more brightness", "brighten the screen", "brighten my screen", "brighten the display", "turn up brightness",
+        "increase screen brightness", "make my screen brighter",
+    )
+    private val brightnessDown = setOf(
+        "brightness down", "decrease brightness", "decrease the brightness", "lower the brightness", "lower brightness",
+        "reduce the brightness", "reduce brightness", "turn down the brightness", "turn the brightness down", "turn brightness down",
+        "dimmer", "dim the screen", "dim my screen", "dim the display", "make it darker", "make the screen darker",
+        "make the screen dimmer", "screen dimmer", "less brightness", "turn down brightness", "decrease screen brightness",
+        "make my screen darker", "make my screen dimmer",
+    )
+    private val autoBrightness = Regex(
+        "^(?:(turn on|switch on|enable|activate|use)|(turn off|switch off|disable|deactivate|stop using))? ?(?:the )?" +
+            "(?:auto|automatic|adaptive)[ -]?brightness(?: mode| setting)?(?: (on|off))?$",
+    )
+
+    private val ringerSilent = Regex(
+        "^(?:(?:turn on|switch on|enable|activate|set|go|switch|change|put it) (?:to |on )?)?(?:the )?silent(?: mode)?(?: on)?$|" +
+            "^(?:put|set|switch|turn|make|change) (?:my |the )?(?:phone|ringer|device|it|mobile) (?:on |to |into )?(?:silent|mute|silent mode)$|" +
+            "^(?:silence|mute|quiet) (?:my |the )?(?:phone|ringer|ringtone|calls|device|mobile)$|^silence$|" +
+            "^(?:turn|switch) off (?:my |the )?(?:ringer|ringtone)$|^(?:turn|switch) (?:my |the )?(?:ringer|ringtone) off$|^(?:ringer|ringtone) off$",
+    )
+    private val ringerVibrate = Regex(
+        "^(?:(?:turn on|switch on|enable|activate|set|go|switch|change|put it) (?:to |on )?)?(?:the )?(?:vibrate|vibration|vibrate only)(?: mode)?(?: on| only)?$|" +
+            "^(?:put|set|switch|turn|make|change) (?:my |the )?(?:phone|ringer|device|it|mobile) (?:on |to |into )?(?:vibrate|vibration|vibrate mode)$",
+    )
+    private val ringerNormal = Regex(
+        "^(?:turn on|switch on|enable) (?:my |the )?(?:ringer|ringtone)$|^(?:turn|switch) (?:my |the )?(?:ringer|ringtone) (?:back )?on$|^(?:ringer|ringtone) on$|" +
+            "^(?:ring|normal|sound|loud|ringer|general) mode$|" +
+            "^(?:turn off|switch off|disable|deactivate|exit|stop|end|cancel|leave) (?:the )?(?:silent|vibrate|vibration)(?: mode)?$|^(?:silent|vibrate|vibration)(?: mode)? off$|" +
+            "^(?:take|get) (?:my |the )?(?:phone|ringer|it) off (?:silent|vibrate|mute)$|^(?:unmute|unsilence) (?:my |the )?(?:phone|ringer|calls|device|mobile)$|" +
+            "^(?:put|set|switch|turn|change) (?:my |the )?(?:phone|ringer|it) (?:on |to |back to |back on )?(?:ring|normal|sound|loud)(?: mode)?$",
+    )
+
+    /** Brightness and the ringer: "brightness 50%", "dim the screen", "silent mode", "vibrate". */
+    private fun phoneSettings(raw: String): Command? {
+        val text = Spoken.digitize(raw)
+        brightnessSet.matchEntire(text)?.let { m ->
+            val percent = m.groupValues[1].ifEmpty { m.groupValues[2] }.toInt()
+            return if (percent in 0..100) Command.Brightness(BrightnessChange.Set(percent)) else null
+        }
+        brightnessWords.matchEntire(text)?.let { m ->
+            val percent = when (m.groupValues[1].ifEmpty { m.groupValues[2] }) {
+                "max", "maximum", "full", "highest", "up all the way" -> 100
+                "half" -> 50
+                else -> 0
+            }
+            return Command.Brightness(BrightnessChange.Set(percent))
+        }
+        if (text in brightnessUp) return Command.Brightness(BrightnessChange.Up)
+        if (text in brightnessDown) return Command.Brightness(BrightnessChange.Down)
+        autoBrightness.matchEntire(text)?.let { m ->
+            val off = m.groupValues[2].isNotEmpty() || m.groupValues[3] == "off"
+            return Command.Brightness(BrightnessChange.Auto(on = !off))
+        }
+        return when {
+            ringerNormal.matches(text) -> Command.Ringer(RingerMode.NORMAL)
+            ringerSilent.matches(text) -> Command.Ringer(RingerMode.SILENT)
+            ringerVibrate.matches(text) -> Command.Ringer(RingerMode.VIBRATE)
+            else -> null
+        }
+    }
+
+    private val coin = Regex("^(?:(?:flip|toss|throw|spin)(?: me)? (?:a |the |one |an )?coin|coin (?:flip|toss)|heads or tails|flip a coin heads or tails)$")
+    private val dice = Regex(
+        "^(?:roll|throw|toss|cast)(?: me)?(?: (?:a|an|the|one|some|(\\d+)))?(?: (\\d+)[ -]?sided)? (?:dice|die|d(\\d+))$|^(?:dice|die) roll$|" +
+            "^roll (\\d+)?d(\\d+)$",
+    )
+    private val pickNumber = Regex(
+        "^(?:pick|choose|give me|generate|select|tell me|get|think of|say)(?: me)?(?: a| an| one)?(?: random)? number" +
+            "(?: (?:between|from) (-?\\d+) (?:and|to|-) (-?\\d+))?$",
+    )
+    private val randomNumber = Regex("^(?:a )?random number(?: (?:between|from) (-?\\d+) (?:and|to|-) (-?\\d+))?$")
+
+    /** "flip a coin", "roll two dice", "roll a d20", "pick a number from 1 to 10". */
+    private fun chance(raw: String): Command? {
+        val text = Spoken.digitize(raw).replace(Regex("(?:^| )(?:a|1) hundred(?= |$)"), " 100").replace(Regex("(?:^| )(?:a|1) thousand(?= |$)"), " 1000")
+            .replace(Regex("\\s+"), " ").trim()
+        if (coin.matches(text)) return Command.Chance(ChanceKind.Coin)
+        dice.matchEntire(text)?.let { m ->
+            val count = (m.groupValues[1].ifEmpty { m.groupValues[4] }).toIntOrNull() ?: 1
+            val sides = (m.groupValues[2].ifEmpty { m.groupValues[3] }.ifEmpty { m.groupValues[5] }).toIntOrNull() ?: 6
+            if (count !in 1..MAX_DICE || sides !in 2..MAX_SIDES) return null
+            return Command.Chance(ChanceKind.Dice(count, sides))
+        }
+        val (m, default) = pickNumber.matchEntire(text)?.let { it to 10 } ?: randomNumber.matchEntire(text)?.let { it to 100 } ?: return null
+        val low = m.groupValues[1].toIntOrNull() ?: 1
+        val high = m.groupValues[2].toIntOrNull() ?: default
+        return Command.Chance(ChanceKind.Number(minOf(low, high), maxOf(low, high)))
+    }
+
+    private val batteryLevel = Regex(
+        "^(?:(?:what(?:'s| is)|how(?:'s| is)|check|show(?: me)?|tell me|read)(?: me)? )?(?:the |my )?(?:phone(?:'s)? |current )?battery" +
+            "(?: level| status| percentage| percent| life| charge| left)?(?: at| now| like| level)?$|" +
+            "^how much (?:battery|charge|power|juice)(?: life)?(?: (?:do i have|have i got|is|does my phone have|does the phone have|is there|remains))?" +
+            "(?: left)?(?: on (?:my|the) phone)?$|" +
+            "^(?:what|which) (?:percentage|percent) is (?:my|the) (?:battery|phone)(?: at)?$|^how charged is (?:my|the) (?:phone|battery)$|" +
+            "^is (?:my|the) battery (?:low|full|dying|ok|okay|good)$",
+    )
+    private val batteryCharging = Regex(
+        "^(?:is|are) (?:my |the )?(?:phone|battery|device|it) (?:charging|plugged in|being charged|on charge|connected to (?:the |a )?charger)$|" +
+            "^am i charging$|^is it charging$|" +
+            "^how long (?:until|till|before|to|will it take(?: for)?|does it take(?: for)?) (?:my |the )?(?:phone |battery |it )?(?:is |to be |to get |gets |will be )?(?:fully )?(?:charged|full|charge)$|" +
+            "^when will (?:my |the )?(?:phone|battery|it) be (?:fully )?(?:charged|full)$",
+    )
+
+    private fun battery(text: String): Command? = when {
+        batteryCharging.matches(text) -> Command.Battery(charging = true)
+        batteryLevel.matches(text) -> Command.Battery()
+        else -> null
+    }
+
     private val nowPlaying = setOf(
         "what's playing", "what is playing", "whats playing", "what's this song", "what is this song", "what song is this",
         "what song is playing", "what's the song", "what song is that", "which song is this", "who sings this",
@@ -719,6 +1049,48 @@ object CommandParser {
         return Command.Clock(found.zone, found.name)
     }
 
+    private val untilLead = Regex(
+        "^(?:how many (?:more )?(days|weeks|sleeps)|how long|how much (?:longer|time)|countdown|count down|days|weeks)" +
+            "(?: (?:is it|are there|are left|left|is left|do i have|do we have|remain|remaining|to go|have i got))?" +
+            " (?:until|till|til|to|before) (.+?)(?: is| comes| starts)?$",
+    )
+    private val sinceLead = Regex(
+        "^(?:how many (days|weeks)|how long|days|weeks)(?: (?:has it been|have passed|have gone by|is it|ago was it|was it|are there))? since (.+)$",
+    )
+    private val agoLead = Regex("^how (?:many (days|weeks)|long) ago (?:was|did|is) (.+?)(?: happen)?$")
+    private val whenIs = Regex("^when(?: is|'s| will be| does| do| is it) (.+?)(?: this year| next year)?(?: fall| come| be| happen| start)?$")
+    private val whatDay = Regex(
+        "^(?:what|which) (?:day|weekday)(?: of the week)? (?:is|was|will be|does|did|will|falls|fall)(?: it)?(?: on)? (.+?)" +
+            "(?: fall on| falls on| fall| be| land on| on)?(?: this year| next year)?$",
+    )
+    private val whatDate = Regex("^(?:what(?:'s| is) the date|what date is it|what date will it be|what will the date be|what date is|what date) (.+)$")
+
+    /** "how many days until Christmas", "how long since new year", "what day is March 3rd", "when is Easter". */
+    private fun dates(text: String, now: LocalDateTime): Command? {
+        val today = now.toLocalDate()
+        untilLead.matchEntire(text)?.let { m -> return daysBetween(m.groupValues[2], today, since = false, weeks = m.groupValues[1] == "weeks") }
+        (sinceLead.matchEntire(text) ?: agoLead.matchEntire(text))?.let { m ->
+            return daysBetween(m.groupValues[2], today, since = true, weeks = m.groupValues[1] == "weeks")
+        }
+        whenIs.matchEntire(text)?.let { m ->
+            val named = Dates.named(m.groupValues[1], today) ?: return null
+            // "When is Eleni's name day" is the name days' own question.
+            if (!named.isOccasion || named.isNameDay || named.name == null) return null
+            val date = named.resolve(today) ?: return null
+            return Command.DaysUntil(date, named.name)
+        }
+        val asked = (whatDay.matchEntire(text) ?: whatDate.matchEntire(text))?.groupValues?.get(1) ?: return null
+        val named = Dates.named(asked.removePrefix("it ").removePrefix("going to be "), today) ?: return null
+        val date = named.resolve(today) ?: return null
+        return Command.WhatDay(date, named.name)
+    }
+
+    private fun daysBetween(spec: String, today: LocalDate, since: Boolean, weeks: Boolean): Command? {
+        val named = Dates.named(spec, today) ?: return null
+        val date = named.resolve(today, past = since) ?: return null
+        return Command.DaysUntil(date, named.name, since, weeks)
+    }
+
     // endregion
 
     // region Apps & people
@@ -794,11 +1166,41 @@ object CommandParser {
         SavedPlace.WORK -> "work"
     }
 
+    private val missedCalls = setOf(
+        "who called me", "who called", "who called me today", "who just called", "who just called me", "who called me earlier",
+        "who called me last", "who was the last person to call me", "who was the last caller", "who was that calling",
+        "missed calls", "missed call", "my missed calls", "any missed calls", "show my missed calls", "show missed calls",
+        "show me my missed calls", "check missed calls", "check my missed calls", "read my missed calls", "do i have any missed calls",
+        "did i miss any calls", "did i miss a call", "did i miss any phone calls", "have i missed any calls", "did anyone call",
+        "did anyone call me", "did somebody call", "did somebody call me", "did someone call", "did someone call me", "has anyone called",
+        "has anyone called me", "has anybody called me", "did anybody call me", "last call", "my last call", "who rang me", "who rang",
+        "who's been calling me", "who has been calling me", "recent calls", "my recent calls", "who tried to call me",
+    )
+    private val callBack = Regex(
+        "^(?:call (?:them |him |her |it |that number |the last number |the last caller |the last missed call |my last missed call |the missed call |" +
+            "whoever called |whoever that was )?back|call back(?: (?:the|my) (?:last )?(?:missed )?(?:call|caller|number))?|" +
+            "return (?:the |my |that )?(?:last )?(?:missed )?(?:phone )?call|call (?:the|my) last (?:missed )?(?:call|caller)|" +
+            "call the person who (?:just )?called(?: me)?|call whoever (?:just )?called(?: me)?)$",
+    )
+    private val redial = Regex(
+        "^(?:redial|redial (?:the |that )?(?:last )?number|call (?:the |that )?last number(?: (?:again|i called|i dialed|i dialled))?|" +
+            "call that number again|call the last person i called|call again)$",
+    )
+
+    /** "who called me", "call back", "redial". */
+    private fun calls(text: String): Command? = when {
+        text in missedCalls -> Command.MissedCalls
+        callBack.matches(text) -> Command.CallBack()
+        redial.matches(text) -> Command.CallBack(redial = true)
+        else -> null
+    }
+
     private val callPattern = Regex("^(?:call|phone|ring|dial|facetime|video call)(?: up)? (.+?)(?: (?:on|at) (?:their |his |her )?(?:mobile|cell|work|home|phone))?$")
     private val phoneNumber = Regex("^\\+?[\\d][\\d\\s().-]{2,}$")
 
     private fun call(text: String): Command? {
-        val who = callPattern.matchEntire(text)?.groupValues?.get(1)?.trim() ?: return null
+        // "call mom back" is calling mom.
+        val who = callPattern.matchEntire(text)?.groupValues?.get(1)?.trim()?.removeSuffix(" back")?.trim() ?: return null
         if (who.isEmpty() || who in setOf("me", "back", "it", "them")) return null
         if (phoneNumber.matches(who)) return Command.DialNumber(who.filter { it.isDigit() || it == '+' })
         return Command.Call(who)
@@ -860,6 +1262,38 @@ object CommandParser {
             return Command.OpenPanel(panel, requested)
         }
         return null
+    }
+
+    private val defineLead = Regex(
+        "^(?:define|definition of|definition for|the definition of|the meaning of|meaning of|dictionary|look up the word|" +
+            "look up the definition of|look up the meaning of|what(?:'s| is) the (?:definition|meaning|dictionary definition) of|" +
+            "give me the definition of|tell me the meaning of|tell me the definition of)(?: the word| the term)? (.+)$",
+    )
+    private val wordMeaning = Regex("^(?:what does|what do)(?: the word| the term| an?| the)? (.+) mean$|^(.+?) (?:definition|meaning|dictionary definition)$")
+    private val spellLead = Regex(
+        "^(?:how (?:do you|do i|to|does one|would you|should i|can i|do we) spell|spell(?: out)?|spelling of|the spelling of|" +
+            "what(?:'s| is) the spelling of|how is the word)(?: the word| the name)? (.+?)(?: spelled| spelt)?$",
+    )
+    private val spelled = Regex("^how (?:is|are|do you write|'s)(?: the word)? (.+?) (?:spelled|spelt|written)$")
+    private val notWords = setOf("check", "checker", "checking", "check app", "book", "this", "that", "it", "me")
+
+    /** "define serendipity", "what does ubiquitous mean", "how do you spell necessary": words, not topics. */
+    private fun dictionary(text: String): Command? {
+        (spellLead.matchEntire(text) ?: spelled.matchEntire(text))?.let { m ->
+            val word = word(m.groupValues[1]) ?: return null
+            return Command.Spell(word)
+        }
+        val asked = defineLead.matchEntire(text)?.groupValues?.get(1)
+            ?: wordMeaning.matchEntire(text)?.let { m -> m.groupValues[1].ifEmpty { m.groupValues[2] } }
+            ?: return null
+        // Longer phrases are topics for Wikipedia.
+        return word(asked)?.let(Command::Define)
+    }
+
+    private fun word(raw: String): String? {
+        val word = raw.trim().trim('"', '“', '”', '\'').removePrefix("the word ").trim()
+        if (word.isEmpty() || word in notWords || words(word).size > MAX_WORD_PARTS) return null
+        return word
     }
 
     private val whatIs = Regex("^(?:what|who) (?:is|are|was|were)(?: an?| the)? (.+)$")
@@ -943,8 +1377,15 @@ object CommandParser {
 
     private fun conversion(text: String): Command? = UnitConverter.parse(text)?.let(Command::Convert)
 
+    private fun currency(text: String): Command? = Currencies.parse(text)
+
     private const val MAX_LENGTH = 160
     private const val MAX_TIMER_SECONDS = 24 * 3600
     private const val SECONDS_PER_DAY = 24 * 3600
     private const val MAX_REMINDER_DAYS = 365
+    private const val MAX_SNOOZE_MINUTES = 60
+    private const val MAX_EVENT_MINUTES = 24 * 60
+    private const val MAX_DICE = 10
+    private const val MAX_SIDES = 1000
+    private const val MAX_WORD_PARTS = 3
 }

@@ -42,6 +42,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.bestassistant.commands.Command
+import com.bestassistant.commands.CommandParser
 import com.bestassistant.commands.MediaAction
 import com.bestassistant.integration.Step
 import com.bestassistant.language.AppLanguage
@@ -222,7 +223,8 @@ class AssistActivity : ComponentActivity(), SearchActions {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // A new request interrupts whatever was still being said.
+        // A new request interrupts whatever was still being said, and a routine still running.
+        fastSearch.routineRunner.cancel()
         fastSearch.speaker.stop()
         setIntent(intent)
         applyIntent(intent)
@@ -360,14 +362,17 @@ class AssistActivity : ComponentActivity(), SearchActions {
 
     private val isVoiceRequest: Boolean get() = voiceQuery != null && latestState.query == voiceQuery
 
-    /** Reads [text] aloud if the user's speech setting allows it for this request; [then] runs after it either way. */
-    private fun say(text: String?, then: (() -> Unit)? = null) {
-        val allowed = when (fastSearch.preferences.settings.value.speech) {
+    /** Whether the user's speech setting has replies to this request read aloud. */
+    private val speaks: Boolean
+        get() = when (fastSearch.preferences.settings.value.speech) {
             SpeechMode.ALWAYS -> true
             SpeechMode.VOICE_ONLY -> isVoiceRequest
             SpeechMode.OFF -> false
         }
-        if (text != null && allowed) fastSearch.speaker.speak(text, then) else then?.invoke()
+
+    /** Reads [text] aloud if the user's speech setting allows it for this request; [then] runs after it either way. */
+    private fun say(text: String?, then: (() -> Unit)? = null) {
+        if (text != null && speaks) fastSearch.speaker.speak(text, then) else then?.invoke()
     }
 
     private fun onStateChanged(state: SearchUiState, runSpoken: Boolean) {
@@ -404,6 +409,33 @@ class AssistActivity : ComponentActivity(), SearchActions {
                 is WikiUi.NotFound -> responder.forArticleMissing(wiki.topic)
                 WikiUi.Unavailable -> responder.forArticleUnavailable()
                 is WikiUi.Loading, null -> null
+            }
+            is Command.Currency -> when (val currency = state.currency) {
+                is CurrencyUi.Ready -> if (currency.command == command) responder.forCurrency(command, currency.result) else null
+                is CurrencyUi.Unsupported -> responder.forCurrencyUnsupported(command)
+                CurrencyUi.Unavailable -> responder.forCurrencyUnavailable()
+                is CurrencyUi.Loading, null -> null
+            }
+            is Command.Define -> when (val definition = state.definition) {
+                is DefinitionUi.Ready -> responder.forDefinition(definition.definition)
+                is DefinitionUi.NotFound -> responder.forDefinitionMissing(definition.word)
+                DefinitionUi.Unavailable -> responder.forDefinitionUnavailable()
+                is DefinitionUi.Loading, null -> null
+            }
+            is Command.Agenda, Command.NextEvent -> when (val agenda = state.agenda) {
+                is AgendaUi.Ready -> when {
+                    agenda.command != command -> null
+                    command is Command.Agenda -> responder.forAgenda(command, agenda.events)
+                    else -> responder.forNextEvent(agenda.events.firstOrNull())
+                }
+                // Just allowed: the events are on their way.
+                AgendaUi.NeedsAccess -> if (fastSearch.calendar.canRead()) null else responder.forCalendarNeedsAccess()
+                null -> null
+            }
+            Command.MissedCalls -> when (val calls = state.calls) {
+                is CallsUi.Ready -> responder.forMissedCalls(calls.missed, calls.last)
+                CallsUi.NeedsAccess -> if (fastSearch.calls.canRead()) null else responder.forCallsNeedAccess()
+                null -> null
             }
             else -> responder.forCommand(command)
         }
@@ -472,8 +504,23 @@ class AssistActivity : ComponentActivity(), SearchActions {
 
     override fun runCommand(command: Command, contact: Contact?, bounds: ComposeRect?) = run(command, contact, bounds, askFirst = true)
 
-    /** What [command] needs and doesn't have yet: location for the car and "where I am", notifications for reminders. */
+    /**
+     * What [command] needs and doesn't have yet: location for the car and "where I am", notifications
+     * for reminders, the calendar, the call history. A routine asks for all its steps need at once.
+     */
     private fun missingPermissions(command: Command): List<String> = buildList {
+        if (command is Command.Routine) {
+            val steps = fastSearch.routines.find(command.name)?.steps.orEmpty()
+            steps.mapNotNull { CommandParser.parse(it) }.filter { it !is Command.Routine }.flatMap(::missingPermissions).distinct().let(::addAll)
+            return@buildList
+        }
+        fun missing(permission: String) =
+            ContextCompat.checkSelfPermission(this@AssistActivity, permission) != PackageManager.PERMISSION_GRANTED
+        if (command.needsCalendar) {
+            if (missing(Manifest.permission.READ_CALENDAR)) add(Manifest.permission.READ_CALENDAR)
+            if (command is Command.AddEvent && missing(Manifest.permission.WRITE_CALENDAR)) add(Manifest.permission.WRITE_CALENDAR)
+        }
+        if (command.needsCallLog && missing(Manifest.permission.READ_CALL_LOG)) add(Manifest.permission.READ_CALL_LOG)
         // Exact location is asked for, but approximate will do (the reply then says how rough the spot is).
         if (command.needsLocation && !fastSearch.location.hasPermission()) {
             add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -508,6 +555,10 @@ class AssistActivity : ComponentActivity(), SearchActions {
             start(fastSearch.media.accessIntent(), bounds)
             return
         }
+        if (command is Command.Routine) {
+            runRoutine(command)
+            return
+        }
         if (command.isInformation) {
             // Answers stay on screen; Enter or a tap reads them out (once they've loaded).
             haptic()
@@ -540,6 +591,35 @@ class AssistActivity : ComponentActivity(), SearchActions {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Runs a routine's steps in turn. The overlay stays open while it talks (so Android keeps the app
+     * running), and closes at the end unless a step opened an app over it.
+     */
+    private fun runRoutine(command: Command.Routine) {
+        val routine = fastSearch.routines.find(command.name) ?: return
+        haptic()
+        toastText(getString(R.string.routine_running, routine.name))
+        // A routine that plays music decides about the music itself; otherwise it comes back at the end.
+        val playsMusic = routine.steps.any { step ->
+            CommandParser.parse(step).let { it is Command.PlayMusic || it is Command.Media }
+        }
+        if (playsMusic) music.forget()
+        fastSearch.routineRunner.start(
+            routine,
+            speak = speaks,
+            launch = { intents ->
+                if (isDestroyed) {
+                    intents.any { intent -> runCatching { applicationContext.startActivity(Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess }
+                } else {
+                    startFirst(intents, null)
+                }
+            },
+        ) { openedApp, finished ->
+            if (!playsMusic) music.resume()
+            if (finished && !openedApp && !isFinishing) dismissSignal++
         }
     }
 
@@ -739,6 +819,7 @@ class AssistActivity : ComponentActivity(), SearchActions {
             micPermission.launch(Manifest.permission.RECORD_AUDIO)
             return
         }
+        fastSearch.routineRunner.cancel()
         fastSearch.speaker.stop()
         music.pause()
         voiceText = textState.text.toString()

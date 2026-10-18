@@ -3,6 +3,8 @@ package com.fastsearch
 import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
+import com.bestassistant.calendar.CalendarStore
+import com.bestassistant.device.Answers
 import com.bestassistant.device.CommandRunner
 import com.bestassistant.integrations.AppIntegrationHost
 import com.bestassistant.integrations.Integrations
@@ -12,12 +14,17 @@ import com.bestassistant.integrations.spotify.SpotifyIntegration
 import com.bestassistant.integrations.tasker.TaskerIntegration
 import com.bestassistant.language.AppLanguage
 import com.bestassistant.media.MediaControl
+import com.bestassistant.money.ExchangeRates
 import com.bestassistant.parking.Parking
+import com.bestassistant.phone.CallHistory
 import com.bestassistant.reminders.Reminders
+import com.bestassistant.routines.RoutineRunner
+import com.bestassistant.routines.Routines
 import com.bestassistant.speech.Responder
 import com.bestassistant.speech.Speaker
 import com.bestassistant.wake.WakeModel
 import com.bestassistant.wiki.WikipediaClient
+import com.bestassistant.wiki.WiktionaryClient
 import com.bestassistant.weather.DeviceLocation
 import com.bestassistant.weather.WeatherClient
 import com.fastsearch.data.AppPreferences
@@ -45,6 +52,7 @@ class FastSearchApp : Application() {
     val web = DuckDuckGoClient()
     val weather = WeatherClient()
     val wikipedia = WikipediaClient()
+    val wiktionary = WiktionaryClient()
     lateinit var speaker: Speaker
         private set
     lateinit var responder: Responder
@@ -64,6 +72,20 @@ class FastSearchApp : Application() {
         private set
     lateinit var parking: Parking
         private set
+    lateinit var calendar: CalendarStore
+        private set
+    lateinit var calls: CallHistory
+        private set
+    lateinit var exchangeRates: ExchangeRates
+        private set
+
+    /** "Good morning" and the like: the user's routines, and what runs them. */
+    lateinit var routines: Routines
+        private set
+    val routineRunner by lazy { RoutineRunner(this) }
+
+    /** Answers to information requests, looked up on the spot (for routines). */
+    val answers by lazy { Answers(this) }
 
     /** This app's resources in the assistant's language, for replies spoken after the overlay closes. */
     lateinit var localized: Context
@@ -85,10 +107,15 @@ class FastSearchApp : Application() {
         )
         reminders = Reminders(this)
         parking = Parking(this)
+        calendar = CalendarStore(this)
+        calls = CallHistory(this)
+        exchangeRates = ExchangeRates(this)
+        routines = Routines(this)
         commands = CommandRunner(
             this, { localized }, media,
             settings = { preferences.settings.value }, integrations = integrations,
             location = location, reminders = reminders, parking = parking,
+            calendar = calendar, calls = calls,
         )
         speaker = Speaker(this, preferences)
         responder = Responder({ localized }, media)

@@ -18,6 +18,11 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Hearing
+import androidx.compose.material.icons.rounded.BrightnessMedium
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Info
@@ -70,6 +75,8 @@ import com.fastsearch.data.SpeechMode
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.Mic
+import android.app.NotificationManager
+import com.bestassistant.device.Brightness
 import com.bestassistant.language.AppLanguage
 import com.bestassistant.wake.WakeControl
 import androidx.compose.material.icons.rounded.RecordVoiceOver
@@ -185,6 +192,16 @@ private fun hasLocation(context: Context) =
 private fun hasMicrophone(context: Context) =
     ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
+private fun hasCalendar(context: Context) =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
+
+private fun hasCallLog(context: Context) =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
+
+private fun hasDndAccess(context: Context) =
+    context.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
+
 private fun hasNotifications(context: Context) = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
     ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
@@ -203,6 +220,11 @@ private fun SettingsScreen(
     var notificationsGranted by remember { mutableStateOf(hasNotifications(context)) }
     var overlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     var mediaGranted by remember { mutableStateOf(context.fastSearch.media.hasAccess()) }
+    var calendarGranted by remember { mutableStateOf(hasCalendar(context)) }
+    var callLogGranted by remember { mutableStateOf(hasCallLog(context)) }
+    var settingsGranted by remember { mutableStateOf(Brightness.canChange(context)) }
+    var dndGranted by remember { mutableStateOf(hasDndAccess(context)) }
+    val routines by context.fastSearch.routines.all.collectAsStateWithLifecycle()
     var engineDialog by remember { mutableStateOf(false) }
     val wakeModel by context.fastSearch.wakeModel.state.collectAsStateWithLifecycle()
     val wakeStatus by WakeControl.status.collectAsStateWithLifecycle()
@@ -217,6 +239,10 @@ private fun SettingsScreen(
         notificationsGranted = hasNotifications(context)
         overlayGranted = Settings.canDrawOverlays(context)
         mediaGranted = context.fastSearch.media.hasAccess()
+        calendarGranted = hasCalendar(context)
+        callLogGranted = hasCallLog(context)
+        settingsGranted = Brightness.canChange(context)
+        dndGranted = hasDndAccess(context)
         onPauseOrDispose { }
     }
 
@@ -244,6 +270,12 @@ private fun SettingsScreen(
 
     val locationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         locationGranted = granted
+    }
+    val calendarLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        calendarGranted = hasCalendar(context)
+    }
+    val callLogLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        callLogGranted = hasCallLog(context)
     }
     val requestLocation = {
         val activity = context as ComponentActivity
@@ -325,6 +357,11 @@ private fun SettingsScreen(
                             PageRow(Icons.Rounded.Hub, R.string.page_connections, stringResource(R.string.summary_connections)) {
                                 page = SettingsPage.CONNECTIONS
                             }
+                            PageRow(
+                                Icons.Rounded.Checklist,
+                                R.string.page_routines,
+                                routines.filter { it.isUsable }.joinToString(", ") { it.name }.ifEmpty { stringResource(R.string.summary_routines_none) },
+                            ) { page = SettingsPage.ROUTINES }
                             PageRow(
                                 Icons.Rounded.Hearing,
                                 R.string.section_wake,
@@ -412,6 +449,38 @@ private fun SettingsScreen(
                             onAction = { context.startActivity(context.fastSearch.media.accessIntent()) },
                         )
                         StepRow(
+                            icon = Icons.Rounded.CalendarMonth,
+                            title = stringResource(R.string.step_calendar_title),
+                            body = stringResource(R.string.step_calendar_body),
+                            done = calendarGranted,
+                            action = stringResource(R.string.action_allow),
+                            onAction = { calendarLauncher.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)) },
+                        )
+                        StepRow(
+                            icon = Icons.Rounded.History,
+                            title = stringResource(R.string.step_calls_title),
+                            body = stringResource(R.string.step_calls_body),
+                            done = callLogGranted,
+                            action = stringResource(R.string.action_allow),
+                            onAction = { callLogLauncher.launch(Manifest.permission.READ_CALL_LOG) },
+                        )
+                        StepRow(
+                            icon = Icons.Rounded.BrightnessMedium,
+                            title = stringResource(R.string.step_system_settings_title),
+                            body = stringResource(R.string.step_system_settings_body),
+                            done = settingsGranted,
+                            action = stringResource(R.string.action_allow),
+                            onAction = { context.startActivity(Brightness.permissionIntent(context)) },
+                        )
+                        StepRow(
+                            icon = Icons.Rounded.DoNotDisturbOn,
+                            title = stringResource(R.string.step_dnd_title),
+                            body = stringResource(R.string.step_dnd_body),
+                            done = dndGranted,
+                            action = stringResource(R.string.action_allow),
+                            onAction = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) },
+                        )
+                        StepRow(
                             icon = Icons.Rounded.Gesture,
                             title = stringResource(R.string.step_gesture_title),
                             body = stringResource(R.string.step_gesture_body),
@@ -436,6 +505,18 @@ private fun SettingsScreen(
                 SettingsPage.CONNECTIONS -> {
                     item { SectionTitle(R.string.section_navigation) }
                     item { Group { NavigationSection(settings, update) } }
+                }
+
+                SettingsPage.ROUTINES -> {
+                    val store = context.fastSearch.routines
+                    item { Group { RoutinesIntro(routines, store) } }
+                    routines.forEach { routine ->
+                        item(key = routine.id) {
+                            SectionTitle(routine.name.ifEmpty { stringResource(R.string.routine_unnamed) })
+                            Spacer(Modifier.height(8.dp))
+                            Group { RoutineEditor(routine, store) }
+                        }
+                    }
                 }
 
                 SettingsPage.WAKE -> item {
@@ -657,6 +738,7 @@ private enum class SettingsPage(@param:StringRes val title: Int, val depth: Int 
     /** One integration's page, titled with its name. */
     INTEGRATION(R.string.page_integrations, depth = 2),
     CONNECTIONS(R.string.page_connections),
+    ROUTINES(R.string.page_routines),
     WAKE(R.string.section_wake),
     VOICE(R.string.section_voice),
     ASSISTANT(R.string.section_assistant_settings),
