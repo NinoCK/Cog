@@ -16,7 +16,6 @@ import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
-import com.bestassistant.automation.Tasker
 import com.bestassistant.commands.Command
 import com.bestassistant.commands.CommandParser
 import com.bestassistant.commands.NavigationApp
@@ -59,7 +58,6 @@ class CommandRunner(
     private val strings: () -> Context,
     private val media: MediaControl,
     private val settings: () -> AppSettings,
-    private val tasker: Tasker,
     private val integrations: Integrations,
     private val location: DeviceLocation,
     private val reminders: Reminders,
@@ -118,7 +116,6 @@ class CommandRunner(
                 else -> Step.Remote { shareLocation(contact.name, number) }
             }
         }
-        is Command.RunTask -> runTask(command)
         is Command.Integration -> integrations[command.integration]?.plan(command.request) ?: Step.Failed(s(R.string.error_integration_removed))
         is Command.Camera -> Step.Launch(
             listOf(
@@ -333,18 +330,7 @@ class CommandRunner(
 
     // endregion
 
-    // region Tasker and integrations
-
-    private fun runTask(command: Command.RunTask): Step = when (tasker.status()) {
-        Tasker.Status.NOT_INSTALLED -> Step.Failed(s(R.string.error_tasker_missing))
-        Tasker.Status.NO_PERMISSION -> Step.Failed(s(R.string.error_tasker_permission))
-        Tasker.Status.DISABLED -> Step.Failed(s(R.string.error_tasker_disabled))
-        Tasker.Status.NO_EXTERNAL_ACCESS -> Step.Failed(s(R.string.error_tasker_access))
-        Tasker.Status.READY -> {
-            val name = tasker.resolve(command.name)
-            if (tasker.run(name)) Step.Done(s(R.string.done_task, name), spoken = s(R.string.say_task, name)) else Step.Failed(s(R.string.error_tasker_missing))
-        }
-    }
+    // region Integrations
 
     /** Whether a spoken request nothing else understood may be offered to an integration ([tryIntegrations]). */
     val takesUnknown: Boolean get() = integrations.takesUnknown

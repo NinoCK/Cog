@@ -1,11 +1,5 @@
 package com.fastsearch.settings
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,9 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoMode
 import androidx.compose.material.icons.rounded.Directions
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -32,17 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.bestassistant.automation.Tasker
 import com.fastsearch.R
 import com.fastsearch.data.AppSettings
 import com.fastsearch.data.NavigationChoice
-import com.fastsearch.fastSearch
 
 /** "Take me home": which app gives directions, and where home and work are. */
 @Composable
@@ -96,71 +84,6 @@ private fun AddressField(value: String, label: Int, onChange: (String) -> Unit) 
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-/** Whether Cog can run the user's Tasker tasks, and the one thing to do next if not. */
-@Composable
-internal fun TaskerSection() {
-    val context = LocalContext.current
-    val tasker = context.fastSearch.tasker
-    var status by remember { mutableStateOf(tasker.status()) }
-    LifecycleResumeEffect(Unit) {
-        status = tasker.status()
-        onPauseOrDispose { }
-    }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { status = tasker.status() }
-    val colors = MaterialTheme.colorScheme
-
-    Intro(Icons.Rounded.AutoMode, R.string.tasker_intro)
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(
-            stringResource(
-                when (status) {
-                    Tasker.Status.READY -> R.string.tasker_status_ready
-                    Tasker.Status.NOT_INSTALLED -> R.string.tasker_status_missing
-                    Tasker.Status.NO_PERMISSION -> R.string.tasker_status_permission
-                    Tasker.Status.DISABLED -> R.string.tasker_status_disabled
-                    Tasker.Status.NO_EXTERNAL_ACCESS -> R.string.tasker_status_access
-                },
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (status == Tasker.Status.READY) colors.primary else colors.onSurfaceVariant,
-        )
-        when (status) {
-            Tasker.Status.NO_PERMISSION -> {
-                Spacer(Modifier.height(8.dp))
-                FilledTonalButton(
-                    onClick = {
-                        val activity = context as ComponentActivity
-                        val prefs = context.fastSearch.preferences
-                        if (prefs.askedForTasker && !activity.shouldShowRequestPermissionRationale(Tasker.PERMISSION_RUN_TASKS)) {
-                            // Denied for good: the app's permission page is the only place left to allow it.
-                            context.startActivity(
-                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
-                            )
-                        } else {
-                            prefs.askedForTasker = true
-                            permission.launch(Tasker.PERMISSION_RUN_TASKS)
-                        }
-                    },
-                ) { Text(stringResource(R.string.action_allow)) }
-            }
-            Tasker.Status.NO_EXTERNAL_ACCESS, Tasker.Status.DISABLED -> {
-                Spacer(Modifier.height(8.dp))
-                FilledTonalButton(
-                    onClick = {
-                        runCatching { context.startActivity(tasker.externalAccessIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                            .recoverCatching {
-                                tasker.installedPackage()?.let { pkg ->
-                                    context.packageManager.getLaunchIntentForPackage(pkg)?.let(context::startActivity)
-                                }
-                            }
-                    },
-                ) { Text(stringResource(R.string.tasker_open_prefs)) }
-            }
-            else -> Unit
-        }
-    }
 }
 
 @Composable

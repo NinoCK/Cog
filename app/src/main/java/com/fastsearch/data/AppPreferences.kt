@@ -118,10 +118,6 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_ASKED_LOCATION, false)
         set(value) = prefs.edit { putBoolean(KEY_ASKED_LOCATION, value) }
 
-    var askedForTasker: Boolean
-        get() = prefs.getBoolean(KEY_ASKED_TASKER, false)
-        set(value) = prefs.edit { putBoolean(KEY_ASKED_TASKER, value) }
-
     fun update(transform: (AppSettings) -> AppSettings) {
         val next = transform(state.value)
         state.value = next
@@ -203,7 +199,6 @@ class AppPreferences(context: Context) {
         const val KEY_WAKE_WORD = "wake_word"
         const val KEY_WAKE_PHRASE = "wake_phrase"
         const val KEY_ASKED_MIC = "asked_microphone"
-        const val KEY_ASKED_TASKER = "asked_tasker"
         const val KEY_NAVIGATION_APP = "navigation_app"
         const val KEY_HOME_ADDRESS = "home_address"
         const val KEY_WORK_ADDRESS = "work_address"

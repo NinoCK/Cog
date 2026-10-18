@@ -98,7 +98,6 @@ class Responder(private val strings: () -> Context, private val media: MediaCont
         is Command.ShareLocation -> s(R.string.say_share_location, contact?.name ?: command.who)
         is Command.NameDays -> forNameDays(command.date)
         is Command.NameDay -> forNameDay(command.name)
-        is Command.RunTask -> s(R.string.say_task, command.name)
         is Command.Integration -> null // integrations answer for themselves
         is Command.Camera -> s(if (command.video) R.string.say_video else R.string.say_photo)
         is Command.OpenPanel -> {

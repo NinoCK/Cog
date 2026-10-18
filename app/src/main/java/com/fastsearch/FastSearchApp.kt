@@ -3,12 +3,12 @@ package com.fastsearch
 import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
-import com.bestassistant.automation.Tasker
 import com.bestassistant.device.CommandRunner
 import com.bestassistant.integrations.AppIntegrationHost
 import com.bestassistant.integrations.Integrations
 import com.bestassistant.integrations.homeassistant.HomeAssistantIntegration
 import com.bestassistant.integrations.spotify.SpotifyIntegration
+import com.bestassistant.integrations.tasker.TaskerIntegration
 import com.bestassistant.language.AppLanguage
 import com.bestassistant.media.MediaControl
 import com.bestassistant.parking.Parking
@@ -56,9 +56,7 @@ class FastSearchApp : Application() {
         private set
     lateinit var wakeModel: WakeModel
         private set
-    lateinit var tasker: Tasker
-        private set
-    /** Home Assistant, Spotify: each a module of its own, installed (or not) from settings. */
+    /** Tasker, Home Assistant, Spotify: each a module of its own, installed (or not) from settings. */
     lateinit var integrations: Integrations
         private set
     lateinit var reminders: Reminders
@@ -78,14 +76,13 @@ class FastSearchApp : Application() {
         contacts = ContactRepository(this)
         location = DeviceLocation(this)
         media = MediaControl(this)
-        tasker = Tasker(this)
         val host = AppIntegrationHost(this, { localized }, appScope)
-        integrations = Integrations(this, host, listOf(HomeAssistantIntegration(host), SpotifyIntegration(host)))
+        integrations = Integrations(this, host, listOf(TaskerIntegration(host), HomeAssistantIntegration(host), SpotifyIntegration(host)))
         reminders = Reminders(this)
         parking = Parking(this)
         commands = CommandRunner(
             this, { localized }, media,
-            settings = { preferences.settings.value }, tasker = tasker, integrations = integrations,
+            settings = { preferences.settings.value }, integrations = integrations,
             location = location, reminders = reminders, parking = parking,
         )
         speaker = Speaker(this, preferences)

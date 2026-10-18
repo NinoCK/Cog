@@ -104,9 +104,6 @@ sealed interface Command {
     /** "send alex my location": a message with a map link to where the phone is; resolved against contacts. */
     data class ShareLocation(val who: String) : Command
 
-    /** "run the task called lights out": starts that Tasker task. */
-    data class RunTask(val name: String) : Command
-
     /** A request an installed integration found ("turn on the kitchen light" for Home Assistant), which it runs. */
     data class Integration(val integration: String, val request: Request) : Command
     data class Camera(val video: Boolean) : Command

@@ -27,8 +27,6 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- After a restart, a one-tap reminder to resume the wake word -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Optional, requested in settings: "run the task called ..." starts the user's Tasker task -->
-    <uses-permission android:name="net.dinglisch.android.tasker.PERMISSION_RUN_TASKS" />
 
     <!-- The torch works without the camera; don't hide the app from devices without one. -->
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
@@ -88,11 +86,9 @@
         <package android:name="com.soundcloud.android" />
         <package android:name="com.aspiro.tidal" />
         <package android:name="com.amazon.mp3" />
-        <!-- "take me home": the navigation apps, and Tasker for "run the task ..." -->
+        <!-- "take me home": the navigation apps -->
         <package android:name="com.google.android.apps.maps" />
         <package android:name="com.waze" />
-        <package android:name="net.dinglisch.android.taskerm" />
-        <package android:name="net.dinglisch.android.tasker" />
     </queries>
 
     <application

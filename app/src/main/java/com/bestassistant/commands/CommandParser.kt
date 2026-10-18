@@ -46,7 +46,6 @@ object CommandParser {
             ?: call(text)
             ?: message(text)
             ?: panel(text)
-            ?: task(text)
             ?: integration(text, Slot.LATE)
             ?: webSearch(text)
             ?: lookup(text)
@@ -922,21 +921,6 @@ object CommandParser {
         // "search for x on the web" says the same thing twice.
         val cleaned = searchOnWeb.matchEntire(query)?.groupValues?.get(1)?.trim() ?: query
         return cleaned.takeIf { it.isNotEmpty() }?.let(Command::WebSearch)
-    }
-
-    private val taskPattern = Regex("^(?:run|start|launch|trigger|execute|perform|fire|do)(?: the| my)?(?: tasker)? task(?: called| named)? (.+)$")
-    private val namedTask = Regex("^(?:run|start|launch|trigger|execute|perform|fire)(?: the| my)? (.+?)(?: tasker)? task$")
-    private val taskInTasker = Regex("^(?:run|start|launch|trigger|execute|perform|fire)(?: the| my)? (.+?) (?:in|on|with|using|through) tasker$")
-    private val taskerFirst = Regex("^tasker(?: run| task| start)* (.+)$")
-
-    private fun task(text: String): Command? {
-        val name = taskPattern.matchEntire(text)?.groupValues?.get(1)
-            ?: namedTask.matchEntire(text)?.groupValues?.get(1)
-            ?: taskInTasker.matchEntire(text)?.groupValues?.get(1)
-            ?: taskerFirst.matchEntire(text)?.groupValues?.get(1)
-            ?: return null
-        val cleaned = name.removePrefix("task ").removeSuffix(" task").trim()
-        return cleaned.takeIf { it.isNotEmpty() && it != "tasker" }?.let(Command::RunTask)
     }
 
     private val openPattern = Regex("^(?:open|launch|start|run|go to|show me) (?:up )?(?:the |my )?(.+?)(?: app| application)?$")

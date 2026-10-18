@@ -436,8 +436,6 @@ private fun SettingsScreen(
                 SettingsPage.CONNECTIONS -> {
                     item { SectionTitle(R.string.section_navigation) }
                     item { Group { NavigationSection(settings, update) } }
-                    item { SectionTitle(R.string.section_tasker) }
-                    item { Group { TaskerSection() } }
                 }
 
                 SettingsPage.WAKE -> item {

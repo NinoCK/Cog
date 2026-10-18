@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AirplanemodeActive
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.AutoMode
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.TravelExplore
@@ -287,7 +286,6 @@ private fun describe(command: Command, contact: Contact?): CommandText {
             stringResource(R.string.cmd_share_location, contact?.name ?: command.who),
             contact?.number.orEmpty(),
         )
-        is Command.RunTask -> CommandText(Icons.Rounded.AutoMode, stringResource(R.string.cmd_task, command.name), "Tasker")
         is Command.Integration -> {
             // What the integration says it will do, with its own icon.
             val integration = context.fastSearch.integrations[command.integration]

@@ -11,6 +11,9 @@ import com.bestassistant.integrations.homeassistant.HomeRequests
 import com.bestassistant.integrations.homeassistant.HomeSettings
 import com.bestassistant.integrations.homeassistant.NumberUnit
 import com.bestassistant.integrations.homeassistant.SettingValue
+import com.bestassistant.integrations.tasker.TaskRequest
+import com.bestassistant.integrations.tasker.TaskRequests
+import com.bestassistant.integrations.tasker.TaskerIntegration
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -326,15 +329,34 @@ class CommandParserTest {
         assertEquals(Command.Lookup("quasar"), parse("look up quasar"))
     }
 
+    /** With Tasker installed too, ahead of Home Assistant as in the app. */
+    private fun installTasker() {
+        CommandParser.integrations = listOf(CommandParser.Installed(TaskerIntegration.ID, TaskRequests)) + CommandParser.integrations
+    }
+
+    private fun task(name: String) = Command.Integration(TaskerIntegration.ID, TaskRequest(name))
+
     @Test
     fun taskerTasks() {
-        assertEquals(Command.RunTask("lights out"), parse("run the task called lights out"))
-        assertEquals(Command.RunTask("lights out"), parse("run task lights out"))
-        assertEquals(Command.RunTask("lights out"), parse("start the lights out task"))
-        assertEquals(Command.RunTask("lights out"), parse("run lights out in tasker"))
-        assertEquals(Command.RunTask("good night"), parse("tasker good night"))
-        assertEquals(Command.RunTask("good night"), parse("trigger the tasker task good night"))
+        installTasker()
+        assertEquals(task("lights out"), parse("run the task called lights out"))
+        assertEquals(task("lights out"), parse("run task lights out"))
+        assertEquals(task("lights out"), parse("start the lights out task"))
+        assertEquals(task("lights out"), parse("run lights out in tasker"))
+        assertEquals(task("good night"), parse("tasker good night"))
+        assertEquals(task("good night"), parse("trigger the tasker task good night"))
         assertEquals(Command.OpenApp("tasker"), parse("open tasker"))
+        // Cog's own and Home Assistant's requests stay theirs.
+        assertEquals(Command.Flashlight(Switch.ON), parse("turn on the flashlight"))
+        assertEquals(HomeAssistantIntegration.ID, (parse("turn off all the lights") as? Command.Integration)?.integration)
+    }
+
+    @Test
+    fun withoutTaskerInstalled() {
+        // What was said is then taken like any other words: an app to open, if there's one by that name, or a search.
+        assertEquals(Command.OpenApp("task called lights out"), parse("run the task called lights out"))
+        assertEquals(null, parse("tasker good night"))
+        assertTrue(parse("start the lights out task") !is Command.Integration)
     }
 
     @Test

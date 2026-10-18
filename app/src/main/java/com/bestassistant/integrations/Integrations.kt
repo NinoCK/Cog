@@ -98,8 +98,9 @@ class AppIntegrationHost(
 
     private companion object {
         /**
-         * Before integrations, Cog's own settings held the Spotify Client ID and the Home Assistant
-         * address and token: moved once to where each integration now keeps them.
+         * Before integrations, Cog's own settings held the Spotify Client ID, the Home Assistant
+         * address and token, and whether Tasker's permission was asked for: moved once to where
+         * each integration now keeps them.
          */
         fun moveOldSettings(context: Context) {
             val settings = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -113,6 +114,11 @@ class AppIntegrationHost(
             move(settings, "spotify_client_id", "spotify", "client_id", secret = false)
             move(settings, "home_assistant_url", "home_assistant", "url", secret = false)
             move(secrets, "home_assistant_token", "home_assistant", "token", secret = true)
+            // Whether Tasker's permission was asked for already: refused again after that, it's refused for good.
+            if (settings.contains("asked_tasker")) {
+                if (settings.getBoolean("asked_tasker", false)) PreferenceStore(context, "tasker").set("asked_permission", "true", secret = false)
+                settings.edit { remove("asked_tasker") }
+            }
         }
     }
 }

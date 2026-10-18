@@ -1,4 +1,4 @@
-package com.bestassistant.automation
+package com.bestassistant.integrations.tasker
 
 import android.content.Context
 import android.content.Intent
@@ -6,8 +6,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Process
 import android.util.Log
-import com.fastsearch.search.FuzzyMatcher
-import com.fastsearch.search.SearchKey
 import java.util.UUID
 
 /**
@@ -15,7 +13,7 @@ import java.util.UUID
  * a broadcast that Tasker accepts once the user allows Cog to run tasks (a runtime permission) and
  * turns on Preferences › Misc › Allow External Access in Tasker.
  */
-class Tasker(private val context: Context) {
+internal class Tasker(private val context: Context) {
 
     enum class Status { READY, NOT_INSTALLED, NO_PERMISSION, DISABLED, NO_EXTERNAL_ACCESS }
 
@@ -43,14 +41,7 @@ class Tasker(private val context: Context) {
      * The name of the user's task that best matches what they said ("lights out" -> "Lights Out"),
      * when Tasker lists its tasks; otherwise what they said, as Tasker matches names exactly.
      */
-    fun resolve(spoken: String): String {
-        val names = taskNames()
-        if (names.isEmpty()) return spoken
-        val query = FuzzyMatcher.normalize(spoken)
-        return names.map { it to FuzzyMatcher.score(query, SearchKey.of(it)) }
-            .filter { it.second >= FuzzyMatcher.TYPO }
-            .maxByOrNull { it.second }?.first ?: spoken
-    }
+    fun resolve(spoken: String): String = TaskNames.best(spoken, taskNames()) ?: spoken
 
     /** Asks Tasker to run [task]; false when no Tasker took the broadcast. */
     fun run(task: String): Boolean {

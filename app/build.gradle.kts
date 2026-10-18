@@ -83,6 +83,7 @@ dependencies {
     implementation(project(":integration-api"))
     implementation(project(":integrations:homeassistant"))
     implementation(project(":integrations:spotify"))
+    implementation(project(":integrations:tasker"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

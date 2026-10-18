@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Optional, requested in settings: "run the task called ..." starts the user's Tasker task -->
+    <uses-permission android:name="net.dinglisch.android.tasker.PERMISSION_RUN_TASKS" />
+
+    <!-- Tasker itself, its task list and its preferences: the Play Store build and the direct-download one. -->
+    <queries>
+        <package android:name="net.dinglisch.android.taskerm" />
+        <package android:name="net.dinglisch.android.tasker" />
+    </queries>
+</manifest>
