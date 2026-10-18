@@ -5,14 +5,14 @@ import android.content.Intent
 /**
  * How an integration plays music in one music app, for "play ...": it finds the app's own page
  * for what was asked for (the artist, the album, a saved playlist) and starts it there. Without
- * one, Cog asks the app to "search and play" instead.
+ * one, PocketSearch asks the app to "search and play" instead.
  */
 interface MusicService {
 
     /** The music app's package. */
     val packageName: String
 
-    /** The app's own page for what was asked for, or null (Cog then searches instead). */
+    /** The app's own page for what was asked for, or null (PocketSearch then searches instead). */
     suspend fun find(query: String, kind: MusicKind, artist: String?): MusicPage?
 
     /** What opens [page] in the app; anything that starts it once it shows is readied too. */
@@ -23,7 +23,7 @@ interface MusicService {
 
     /**
      * Once the app is up, with [page] open (null: none was found): starts it. False when it
-     * couldn't, and Cog then asks the app's player itself.
+     * couldn't, and PocketSearch then asks the app's player itself.
      */
     suspend fun start(page: MusicPage?): Boolean
 }

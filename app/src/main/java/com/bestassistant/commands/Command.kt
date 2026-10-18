@@ -83,7 +83,7 @@ sealed interface Command {
 
     /**
      * "remind me at 5 to call mom": a notification at [time] saying [what], as the user said it.
-     * Either may be null when the user didn't say; Cog asks for the time before setting it.
+     * Either may be null when the user didn't say; PocketSearch asks for the time before setting it.
      */
     data class Remind(val what: String?, val time: ReminderTime?) : Command
     data object ShowReminders : Command

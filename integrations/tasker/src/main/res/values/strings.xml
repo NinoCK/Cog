@@ -10,9 +10,9 @@
 
     <!-- Settings -->
     <string name="tasker_intro">Say “run the task called …” to run one of your Tasker tasks by name.</string>
-    <string name="tasker_status_ready">Ready: Cog can run your Tasker tasks.</string>
+    <string name="tasker_status_ready">Ready: PocketSearch can run your Tasker tasks.</string>
     <string name="tasker_status_missing">Tasker isn\'t installed on this phone.</string>
-    <string name="tasker_status_permission">Allow Cog to run your Tasker tasks.</string>
+    <string name="tasker_status_permission">Allow PocketSearch to run your Tasker tasks.</string>
     <string name="tasker_status_disabled">Tasker is turned off.</string>
     <string name="tasker_status_access">In Tasker, turn on Preferences › Misc › Allow External Access.</string>
     <string name="tasker_allow">Allow running tasks</string>
@@ -23,7 +23,7 @@
     <string name="say_task">Running your Tasker task %1$s.</string>
     <string name="done_task">Ran %1$s in Tasker</string>
     <string name="error_tasker_missing">Tasker is not installed.</string>
-    <string name="error_tasker_permission">Allow Cog to run Tasker tasks in Cog settings, under Integrations and Tasker.</string>
+    <string name="error_tasker_permission">Allow PocketSearch to run Tasker tasks in PocketSearch settings, under Integrations and Tasker.</string>
     <string name="error_tasker_disabled">Tasker is turned off.</string>
     <string name="error_tasker_access">In Tasker, turn on Allow External Access, under Preferences and Misc.</string>
 </resources>

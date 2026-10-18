@@ -28,7 +28,7 @@ class Jellyfin(private val login: () -> Login, private val session: Session, pri
         fun read(): Signed?
         fun save(signed: Signed?)
 
-        /** Stable and random, so the server keeps one session for Cog. */
+        /** Stable and random, so the server keeps one session for PocketSearch. */
         val deviceId: String
     }
 
@@ -201,7 +201,7 @@ class Jellyfin(private val login: () -> Login, private val session: Session, pri
 
     // region Players
 
-    /** The players the user has open that can be told what to do, the most recently used first; Cog itself isn't one. */
+    /** The players the user has open that can be told what to do, the most recently used first; PocketSearch itself isn't one. */
     suspend fun players(): Result<List<Player>> = when (val result = call("GET", "/Sessions?controllableByUserId=$USER&activeWithinSeconds=$ACTIVE_SECONDS")) {
         is Result.Ok -> Result.Ok(parsePlayers(result.value).filter { it.deviceId != session.deviceId })
         is Result.Failed -> result
@@ -291,7 +291,7 @@ class Jellyfin(private val login: () -> Login, private val session: Session, pri
 
     companion object {
         private const val TAG = "Jellyfin"
-        private const val CLIENT = "Cog"
+        private const val CLIENT = "PocketSearch"
         private const val VERSION = "1.0"
 
         /** Replaced by the signed-in user's id in each address. */

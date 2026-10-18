@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * The integrations that come with Cog ([all]), and the ones the user has installed: only those
+ * The integrations that come with PocketSearch ([all]), and the ones the user has installed: only those
  * have their requests understood ([CommandParser.integrations], kept up to date here), their
  * settings shown, and spoken requests nothing else understood offered to them.
  */
@@ -59,7 +59,7 @@ class Integrations(context: Context, private val host: IntegrationHost, val all:
         return null
     }
 
-    // Everything that comes with Cog is installed until the user removes it, as it was before integrations.
+    // Everything that comes with PocketSearch is installed until the user removes it, as it was before integrations.
     private fun read() = all.filter { prefs.getBoolean(KEY_INSTALLED + it.id, true) }
 
     private fun publish() {
@@ -74,7 +74,7 @@ class Integrations(context: Context, private val host: IntegrationHost, val all:
     }
 }
 
-/** What integrations get of Cog: [strings] follows the assistant's language. */
+/** What integrations get of PocketSearch: [strings] follows the assistant's language. */
 class AppIntegrationHost(
     override val context: Context,
     private val localized: () -> Context,
@@ -98,7 +98,7 @@ class AppIntegrationHost(
 
     private companion object {
         /**
-         * Before integrations, Cog's own settings held the Spotify Client ID, the Home Assistant
+         * Before integrations, PocketSearch's own settings held the Spotify Client ID, the Home Assistant
          * address and token, and whether Tasker's permission was asked for: moved once to where
          * each integration now keeps them.
          */
@@ -124,7 +124,7 @@ class AppIntegrationHost(
 }
 
 /**
- * An integration's settings in a file of its own; secrets go with Cog's other credentials, which
+ * An integration's settings in a file of its own; secrets go with PocketSearch's other credentials, which
  * are kept out of device backups (see res/xml/backup_rules.xml).
  */
 private class PreferenceStore(context: Context, private val id: String) : SettingsStore {

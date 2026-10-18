@@ -3,7 +3,7 @@ package com.bestassistant.wake
 import java.util.Locale
 
 /**
- * Finds the wake phrase ("ok Cog") in what the offline recognizer heard.
+ * Finds the wake phrase ("ok Pocket") in what the offline recognizer heard.
  *
  * The recognizer runs unrestricted and this matcher looks for the phrase in its transcript:
  * forcing the recognizer to choose between the phrase and "something else" makes it hear the

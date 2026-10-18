@@ -1,10 +1,12 @@
-# Cog
+<p align="center"><img src="docs/logo.png" width="128" alt="PocketSearch logo"></p>
+
+# PocketSearch
 
 A privacy-first replacement for the default Android assistant (Gemini). It's built on
-FastSearch, an earlier search-bar app: say **“ok Cog”** or invoke the assistant gesture and
+FastSearch, an earlier search-bar app: say **“ok Pocket”** or invoke the assistant gesture and
 the frosted search bar drops in, keyboard up and microphone already listening. Speak or type, and
-Cog either searches (apps, contacts, maths, web) or **does what you asked and tells you
-so out loud**, in a polite little robot voice: sets alarms and timers, plays music on Spotify,
+PocketSearch either searches (apps, contacts, maths, web) or **does what you asked and tells you
+so out loud**: sets alarms and timers, plays music on Spotify,
 reads the weather, answers "what is…" from Wikipedia, toggles the flashlight, controls volume and
 media, converts units, tells the time anywhere, and calls and texts people. In English and Greek.
 
@@ -45,7 +47,7 @@ search bar. Start typing and it stops listening. When you finish speaking, the c
 itself. Speech recognition is the phone's own service, in-process (no popup), preferring its
 offline model.
 
-**Wake word.** *Settings › Wake word* listens for **“ok Cog”** (or any English phrase you type)
+**Wake word.** *Settings › Wake word* listens for **“ok Pocket”** (or any English phrase you type)
 with an offline [Vosk](https://alphacephei.com/vosk/) model, downloaded once (41 MB, checked
 against a fixed SHA-256). Audio is decoded in memory and never stored or sent. It runs as a
 microphone foreground service with a notification and the system mic indicator, and pauses while
@@ -53,9 +55,8 @@ the overlay is open. It needs *display over other apps* to pop up over other app
 posts a "tap to talk" notification). On the lock screen it asks you to unlock first. After a
 reboot Android won't let it start listening by itself, so it posts a one-tap reminder.
 
-**Speaking.** *Settings › Voice*: Cog (polite robot with a metallic shimmer), Natural, Classic
-robot, Tiny bot or Big bot, each **Male** or **Female**. Voices are the phone's offline
-text-to-speech, reshaped with classic DSP (flanger, ring modulation, comb filter). Engines don't
+**Speaking.** *Settings › Voice*: the phone's own offline text-to-speech voice, **Male** or
+**Female**. Engines don't
 say which voices are male, so each voice's pitch is measured once on the phone; if there's no
 voice of the wanted kind (Google's Greek voice is female), the voice is resampled to move its
 formants and pitch, with the engine speaking faster to keep the tempo. *Base voice* lists the
@@ -128,11 +129,11 @@ adb shell cmd role add-role-holder android.app.role.ASSISTANT com.bestassistant.
 
 `./gradlew testDebugUnitTest` runs the unit tests: the English and Greek command parsers
 (hundreds of phrases, including ones that must stay ordinary searches), the wake-phrase matcher,
-the pitch detector and voice reshaping, the robot-voice DSP and WAV reader, Wikipedia parsing,
+the pitch detector and voice reshaping, the wake chirp and WAV reader, Wikipedia parsing,
 the calculator and the fuzzy matcher.
 
-The release APK is about 100 MB, almost all of it native speech libraries (the wake word and the
-on-device voice) for three CPU types (arm64, armv7, x86_64).
+The release APK is about 34 MB, almost all of it the offline wake word's native speech library
+for three CPU types (arm64, armv7, x86_64).
 
 ## How it works
 
@@ -162,8 +163,8 @@ app/src/main/java/
 │   ├── speech/
 │   │   ├── Responder.kt            the reply template for every scenario
 │   │   ├── Speaker.kt              text-to-speech, voice choice, streaming playback
-│   │   ├── VoiceStyle.kt           voice styles and male/female
-│   │   ├── RobotVoice.kt           robot effects and the wake chirp
+│   │   ├── VoiceGender.kt          male/female
+│   │   ├── Chirp.kt                the wake chirp
 │   │   ├── Pitch.kt                pitch measurement and male/female resampling
 │   │   └── Wav.kt                  reads synthesised speech
 │   ├── device/                     Command -> intents / CameraManager / AudioManager
@@ -183,7 +184,7 @@ app/src/main/java/
 - Asking Spotify for an artist, song or album sends that name to Wikidata once, to find its
   Spotify page; the answer is kept on the phone. Saved playlists never leave it.
 - The optional Spotify connection talks only to the Spotify app on the phone, using the user's
-  own Client ID; Cog itself sends nothing to Spotify's servers.
+  own Client ID; PocketSearch itself sends nothing to Spotify's servers.
 - The optional "press play in Spotify" helper is an accessibility service limited to Spotify. It
   looks at Spotify's screen only for a few seconds after you ask to play something, taps one
   button, and stores or sends nothing.

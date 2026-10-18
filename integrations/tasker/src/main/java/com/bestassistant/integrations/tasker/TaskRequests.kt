@@ -8,8 +8,8 @@ import com.bestassistant.integration.Slot
 data class TaskRequest(val name: String) : Request
 
 /**
- * Finds requests to run a Tasker task, late: after everything Cog does itself, so "start the
- * timer" or "run spotify" stay Cog's own.
+ * Finds requests to run a Tasker task, late: after everything PocketSearch does itself, so "start the
+ * timer" or "run spotify" stay PocketSearch's own.
  */
 object TaskRequests : RequestParser {
 

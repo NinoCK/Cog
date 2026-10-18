@@ -7,61 +7,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.sin
 
-class RobotVoiceTest {
-
-    private val rate = 22_050
-
-    /** Half a second of a 220 Hz "voice". */
-    private val tone = ShortArray(rate / 2) { (sin(2 * PI * 220 * it / rate) * 12_000).toInt().toShort() }
-
-    @Test
-    fun everyStyleProducesSafeAudioOfTheSameLength() {
-        VoiceStyle.entries.mapNotNull { it.effect }.forEach { fx ->
-            val out = RobotVoice.process(tone, rate, fx)
-            assertEquals(tone.size, out.size)
-            val peak = out.maxOf { abs(it.toInt()) }
-            assertTrue("peak $peak should be loud but not clipped", peak in 8_000..32_000)
-        }
-    }
-
-    @Test
-    fun effectsChangeTheSound() {
-        val out = RobotVoice.process(tone, rate, VoiceStyle.COG.effect!!)
-        val difference = tone.indices.count { abs(out[it] - tone[it]) > 500 }
-        assertTrue(difference > tone.size / 4)
-    }
-
-    @Test
-    fun robotisingSpeaksOnOneFlatNote() {
-        val out = RobotVoice.process(tone, rate, RobotEffect(robotMix = 1f, robotHz = 150f))
-        assertEquals(150f, Pitch.median(out, rate)!!, 8f)
-    }
-
-    @Test
-    fun androidKeepsTheNaturalVoiceAndItsTiming() {
-        // Speech then silence: the silence must stay silent, and the speech mostly unchanged.
-        val input = tone + ShortArray(rate / 4)
-        val out = RobotVoice.process(input, rate, VoiceStyle.ANDROID.effect!!)
-        assertEquals(input.size, out.size)
-        assertTrue(out.takeLast(rate / 8).all { abs(it.toInt()) < 200 })
-        var cross = 0.0
-        var a = 0.0
-        var b = 0.0
-        for (i in tone.indices) {
-            cross += input[i] * out[i].toDouble()
-            a += input[i] * input[i].toDouble()
-            b += out[i] * out[i].toDouble()
-        }
-        assertTrue(cross / Math.sqrt(a * b) > 0.6)
-    }
+class SpeakerTest {
 
     @Test
     fun chirpIsShortAndAudible() {
-        val chirp = RobotVoice.chirp(24_000)
+        val chirp = Chirp.samples(24_000)
         assertTrue(chirp.size in 24_000 / 10..24_000 / 2)
         assertTrue(chirp.maxOf { abs(it.toInt()) } > 3_000)
     }

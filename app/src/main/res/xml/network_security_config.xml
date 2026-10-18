@@ -2,7 +2,7 @@
 <!--
     Home Assistant usually runs on the home network over plain http (http://homeassistant.local:8123
     or a 192.168.x.x address), which can't be listed here by name. Cleartext is allowed for that;
-    every other request Cog makes uses https URLs.
+    every other request PocketSearch makes uses https URLs.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">

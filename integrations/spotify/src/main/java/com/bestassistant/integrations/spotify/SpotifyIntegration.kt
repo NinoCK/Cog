@@ -124,7 +124,7 @@ class SpotifyIntegration(private val host: IntegrationHost) : Integration, Music
                 label = s(R.string.spotify_connect),
                 enabled = { remote.isSetUp && !remote.status.value.isBusy },
                 run = { actions ->
-                    // Spotify's "allow Cog" screen; its answer is handled in the app's scope, so
+                    // Spotify's "allow PocketSearch" screen; its answer is handled in the app's scope, so
                     // leaving the screen doesn't lose it.
                     remote.authorizationIntent(actions.activity)?.let { intent ->
                         actions.startForResult(intent) { code, data -> remote.authorizationResult(code, data) }
@@ -187,7 +187,7 @@ class SpotifyIntegration(private val host: IntegrationHost) : Integration, Music
     companion object {
         const val ID = "spotify"
 
-        /** Where the Client ID is kept: what Cog's settings used to keep it under is moved here once. */
+        /** Where the Client ID is kept: what PocketSearch's settings used to keep it under is moved here once. */
         const val KEY_CLIENT_ID = "client_id"
 
         const val SPOTIFY_PACKAGE = "com.spotify.music"

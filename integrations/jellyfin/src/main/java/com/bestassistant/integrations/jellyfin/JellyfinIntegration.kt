@@ -64,7 +64,7 @@ class JellyfinIntegration(private val host: IntegrationHost) : Integration {
     private val jellyfin = Jellyfin(
         login = { Jellyfin.Login(store.get(KEY_URL), store.get(KEY_USER), store.get(KEY_PASSWORD, secret = true)) },
         session = session,
-        device = "Cog on ${Build.MODEL}",
+        device = "PocketSearch on ${Build.MODEL}",
     )
 
     private val library = Library()
@@ -134,7 +134,7 @@ class JellyfinIntegration(private val host: IntegrationHost) : Integration {
         Setting.Note(s(R.string.jf_examples_text)),
     )
 
-    /** Signs in afresh, and says which players are open and how much of the library Cog knows by name. */
+    /** Signs in afresh, and says which players are open and how much of the library PocketSearch knows by name. */
     private suspend fun check(): Report {
         when (val signed = jellyfin.signIn()) {
             is Result.Failed -> return Report(problem(signed.why), Tone.BAD)

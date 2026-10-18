@@ -7,8 +7,8 @@ import com.bestassistant.integration.Slot
 /**
  * "turn on the kitchen light": [text] is handed to Home Assistant's own (rule-based) Assist,
  * which knows the user's devices and areas, and answers with its own sentence. [group] is set
- * for "turn off all the lights" and the like, which Cog does itself across every such device;
- * [setting] for "set the air conditioner to cooling" or "start the vacuum", which Cog matches
+ * for "turn off all the lights" and the like, which PocketSearch does itself across every such device;
+ * [setting] for "set the air conditioner to cooling" or "start the vacuum", which PocketSearch matches
  * against what the device itself says it can do; [query] for "is the front door locked?",
  * answered from what Home Assistant says about its devices and sensors.
  */
@@ -23,7 +23,7 @@ data class HomeRequest(
  * Finds requests for the house in what was said. Questions about the house and device settings
  * come early ("what's the temperature in the bedroom" before the weather takes it, "put the AC on
  * cool" before music takes "put ... on" as a song); switching devices on and off comes late, after
- * the phone's own switches and everything else Cog does itself.
+ * the phone's own switches and everything else PocketSearch does itself.
  */
 object HomeRequests : RequestParser {
 
@@ -32,7 +32,7 @@ object HomeRequests : RequestParser {
         Slot.LATE -> smartHome(text)
     }
 
-    /** Both, the way Cog asks: for tests, with [said] lowercase and without its final punctuation. */
+    /** Both, the way PocketSearch asks: for tests, with [said] lowercase and without its final punctuation. */
     internal fun find(said: String): HomeRequest? {
         val text = said.trim().lowercase().trimEnd('?', '!', '.')
         return parse(text, Slot.EARLY) ?: parse(text, Slot.LATE)

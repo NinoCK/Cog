@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- How the integration shows in Cog's settings -->
+    <!-- How the integration shows in PocketSearch's settings -->
     <string name="ha_name">Home Assistant</string>
     <string name="ha_description">Switch, set and ask about the devices in your own Home Assistant.</string>
     <string name="ha_summary_set_up">Set up</string>
@@ -175,12 +175,12 @@
         <item quantity="one">%d device</item>
         <item quantity="other">%d devices</item>
     </plurals>
-    <string name="error_ha_not_set_up">Home Assistant is not set up yet. Add its address and a token in Cog settings, under Integrations.</string>
+    <string name="error_ha_not_set_up">Home Assistant is not set up yet. Add its address and a token in PocketSearch settings, under Integrations.</string>
     <string name="error_ha_not_understood">Home Assistant did not understand that.</string>
     <string name="error_ha_unauthorized">Home Assistant refused my token. Please check it in settings.</string>
     <string name="error_ha_unreachable">I am unable to reach Home Assistant at the moment.</string>
     <string name="cmd_smart_home">Home Assistant</string>
-    <string name="cmd_smart_home_not_set_up">Home Assistant · set it up in Cog settings</string>
+    <string name="cmd_smart_home_not_set_up">Home Assistant · set it up in PocketSearch settings</string>
     <string name="ha_intro">“Turn on the kitchen light”: requests go straight to your own Home Assistant and its built-in Assist, in English or Greek. Create a long-lived access token in your Home Assistant profile, on the Security tab.</string>
     <string name="ha_url">Address</string>
     <string name="ha_url_hint">e.g. http://homeassistant.local:8123</string>
@@ -189,12 +189,12 @@
     <string name="ha_status_ok">Connected to Home Assistant.</string>
     <string name="ha_status_unauthorized">Home Assistant refused this token.</string>
     <string name="ha_status_unreachable">Couldn\'t reach Home Assistant at this address.</string>
-    <string name="ha_seen">Cog sees: %1$s</string>
+    <string name="ha_seen">PocketSearch sees: %1$s</string>
     <string name="ha_seen_acs">Air conditioners: %1$s</string>
     <string name="ha_seen_no_acs">No air conditioners (climate devices that cool).</string>
     <string name="ha_seen_areas">Areas: %1$d</string>
     <string name="ha_seen_no_areas">Areas: not available, this token isn\'t an administrator\'s.</string>
     <string name="ha_status_checking">Checking…</string>
     <string name="ha_status_not_set">Add the address and a token.</string>
-    <string name="ha_fallback_note">When set up, spoken requests Cog doesn\'t know are offered to Home Assistant too.</string>
+    <string name="ha_fallback_note">When set up, spoken requests PocketSearch doesn\'t know are offered to Home Assistant too.</string>
 </resources>

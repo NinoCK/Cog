@@ -7,7 +7,7 @@
     <string name="jf_card_not_set_up">Jellyfin isn\'t set up</string>
 
     <!-- Settings -->
-    <string name="jf_intro">Cog signs in to your Jellyfin server as you, finds what you ask for in your library and plays it on a Jellyfin player you have open: the TV app, a browser, Kodi. Nothing goes through anyone else\'s server.</string>
+    <string name="jf_intro">PocketSearch signs in to your Jellyfin server as you, finds what you ask for in your library and plays it on a Jellyfin player you have open: the TV app, a browser, Kodi. Nothing goes through anyone else\'s server.</string>
     <string name="jf_url">Server address</string>
     <string name="jf_url_hint">http://192.168.1.10:8096</string>
     <string name="jf_user">User name</string>
@@ -23,7 +23,7 @@
     <string name="jf_status_no_players">No player is open right now: open Jellyfin on your TV to play on it.</string>
     <string name="jf_status_players">Players open now: %1$s.</string>
     <string name="jf_players">Players</string>
-    <string name="jf_players_note">Say where to play (“on the bedroom TV”) or Cog plays on the player already playing, the only one open, or the one named here.</string>
+    <string name="jf_players_note">Say where to play (“on the bedroom TV”) or PocketSearch plays on the player already playing, the only one open, or the one named here.</string>
     <string name="jf_default_player">Usual player</string>
     <string name="jf_default_player_hint">Living Room TV</string>
     <string name="jf_phone_note">Say “on my phone” to watch here: in Jellyfin, if it\'s open on this phone, otherwise in a video player.</string>
@@ -42,7 +42,7 @@
     <string name="jf_no_such_player">There\'s no player called %1$s. %2$s</string>
     <string name="jf_no_players_open">No Jellyfin player is open.</string>
     <string name="jf_players_open">Open now: %1$s.</string>
-    <string name="jf_phone_one_only">On the phone Cog plays one video or song at a time: name a movie, an episode or a song.</string>
+    <string name="jf_phone_one_only">On the phone PocketSearch plays one video or song at a time: name a movie, an episode or a song.</string>
     <string name="jf_no_video_app">There\'s no video player on this phone.</string>
     <string name="jf_not_found">I couldn\'t find %1$s on Jellyfin.</string>
     <string name="jf_no_show">I couldn\'t find a show called %1$s on Jellyfin.</string>
@@ -115,7 +115,7 @@
     </plurals>
 
     <!-- Errors -->
-    <string name="jf_error_not_set_up">Set up Jellyfin first, in Cog settings under Integrations.</string>
+    <string name="jf_error_not_set_up">Set up Jellyfin first, in PocketSearch settings under Integrations.</string>
     <string name="jf_error_not_understood">Jellyfin didn\'t understand that.</string>
     <string name="jf_error_unauthorized">Jellyfin didn\'t accept the user name or password.</string>
     <string name="jf_error_unreachable">I couldn\'t reach your Jellyfin server.</string>

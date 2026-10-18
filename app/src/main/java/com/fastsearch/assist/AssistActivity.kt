@@ -354,7 +354,7 @@ class AssistActivity : ComponentActivity(), SearchActions {
     /** An answer that was asked for (Enter, or voice) but whose data is still loading. */
     private var pendingAnswer: Command? = null
 
-    /** A question Cog asked back ("Which one?"): what's heard next answers it. */
+    /** A question PocketSearch asked back ("Which one?"): what's heard next answers it. */
     private var question: Step.Ask? = null
     private var questionAt = 0L
 
@@ -795,7 +795,7 @@ class AssistActivity : ComponentActivity(), SearchActions {
         }
     }
 
-    /** "ok Cog, set a timer" -> "set a timer". */
+    /** "ok Pocket, set a timer" -> "set a timer". */
     private fun withoutWakePhrase(text: String): String {
         val phrase = WakePhrase.words(fastSearch.preferences.settings.value.wakePhrase)
         val words = text.trim().split(Regex("\\s+"))

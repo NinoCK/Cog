@@ -55,7 +55,7 @@ object CommandParser {
     // region Normalisation
 
     private val politePrefixes = listOf(
-        "hey assistant ", "ok assistant ", "ok cog ", "okay cog ", "hey cog ", "cog ", "hey ", "ok ", "okay ", "please ", "can you ", "could you ",
+        "hey assistant ", "ok assistant ", "ok pocket ", "okay pocket ", "hey pocket ", "pocket ", "hey ", "ok ", "okay ", "please ", "can you ", "could you ",
         "would you ", "will you ", "can u ", "i want to ", "i'd like to ", "i need to ", "go ahead and ",
         "just ", "quickly ",
     )

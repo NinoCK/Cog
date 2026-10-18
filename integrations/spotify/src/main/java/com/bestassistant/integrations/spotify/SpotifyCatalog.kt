@@ -139,7 +139,7 @@ class SpotifyCatalog(context: Context) {
         private const val TAG = "SpotifyCatalog"
         private const val WIKIDATA = "https://www.wikidata.org/w/api.php"
         private const val MUSICBRAINZ = "https://musicbrainz.org/ws/2"
-        private const val USER_AGENT = "Cog/1.0 ( https://github.com/NinoCK/Cog )"
+        private const val USER_AGENT = "PocketSearch/1.0 ( https://github.com/NinoCK/PocketSearch )"
         private const val CANDIDATES = 5
         private const val BUSY_RETRY_MS = 1_100L
         private val spotifyId = Regex("[A-Za-z0-9]{22}")

@@ -280,8 +280,8 @@ class CommandParserTest {
 
     @Test
     fun wakePhraseIsNotPartOfTheRequest() {
-        assertEquals(Command.SetTimer(300), parse("ok cog, set a timer for 5 minutes"))
-        assertEquals(Command.Media(MediaAction.NEXT), parse("hey cog next song"))
+        assertEquals(Command.SetTimer(300), parse("ok pocket, set a timer for 5 minutes"))
+        assertEquals(Command.Media(MediaAction.NEXT), parse("hey pocket next song"))
     }
 
     @Test
@@ -303,7 +303,7 @@ class CommandParserTest {
         assertEquals(home, parse("navigate to my house"))
         assertEquals(home, parse("go home"))
         assertEquals(home, parse("drive home"))
-        assertEquals(home, parse("hey cog, take me home please"))
+        assertEquals(home, parse("hey pocket, take me home please"))
         assertEquals(work, parse("take me to work"))
         assertEquals(work, parse("directions to the office"))
         assertEquals(work, parse("go to work"))
@@ -353,7 +353,7 @@ class CommandParserTest {
         assertEquals(task("good night"), parse("tasker good night"))
         assertEquals(task("good night"), parse("trigger the tasker task good night"))
         assertEquals(Command.OpenApp("tasker"), parse("open tasker"))
-        // Cog's own and Home Assistant's requests stay theirs.
+        // PocketSearch's own and Home Assistant's requests stay theirs.
         assertEquals(Command.Flashlight(Switch.ON), parse("turn on the flashlight"))
         assertEquals(HomeAssistantIntegration.ID, (parse("turn off all the lights") as? Command.Integration)?.integration)
     }
@@ -366,7 +366,7 @@ class CommandParserTest {
         assertTrue(parse("start the lights out task") !is Command.Integration)
     }
 
-    /** With Tasker and Jellyfin installed too, in the app's order, and a library with one movie Cog knows by name. */
+    /** With Tasker and Jellyfin installed too, in the app's order, and a library with one movie PocketSearch knows by name. */
     private fun installJellyfin() {
         val library = Library().apply { set(listOf("Inception")) }
         CommandParser.integrations = listOf(
@@ -441,7 +441,7 @@ class CommandParserTest {
         assertEquals(DeviceSetting("the ac", SettingValue.Step(false)), setting("turn the ac down"))
         assertEquals(DeviceSetting("the bedroom temperature", SettingValue.Step(true)), setting("make the bedroom warmer"))
         assertEquals(DeviceSetting("the ac swing", SettingValue.Word("on")), setting("turn on the ac swing"))
-        // Any "turn on/off ..." goes to Cog's own matching first, whatever the device is called.
+        // Any "turn on/off ..." goes to PocketSearch's own matching first, whatever the device is called.
         assertEquals(DeviceSetting("desk ac", SettingValue.Word("on")), setting("turn desk ac on"))
         assertEquals(DeviceSetting("the fridge plug", SettingValue.Word("off")), setting("turn off the fridge plug"))
         assertEquals(DeviceSetting("desk ac", SettingValue.Number(22.0, NumberUnit.DEGREES)), setting("turn desk ac to 22 degrees"))

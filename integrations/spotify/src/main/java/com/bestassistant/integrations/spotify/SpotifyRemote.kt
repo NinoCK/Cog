@@ -86,7 +86,7 @@ class SpotifyRemote(private val context: Context, private val clientId: () -> St
         state.value = restingStatus()
     }
 
-    /** Step 1 of setting up: the screen where the user allows Cog, inside Spotify. */
+    /** Step 1 of setting up: the screen where the user allows PocketSearch, inside Spotify. */
     fun authorizationIntent(activity: Activity): Intent? {
         if (!isSetUp) return null
         state.value = Status.Authorizing

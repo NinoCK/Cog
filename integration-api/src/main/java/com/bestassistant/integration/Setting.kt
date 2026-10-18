@@ -5,7 +5,7 @@ import android.content.Intent
 import kotlinx.coroutines.flow.Flow
 
 /**
- * One part of an integration's settings page. Cog draws them all the same way, so an integration
+ * One part of an integration's settings page. PocketSearch draws them all the same way, so an integration
  * describes what to ask for and never draws anything itself.
  */
 sealed interface Setting {

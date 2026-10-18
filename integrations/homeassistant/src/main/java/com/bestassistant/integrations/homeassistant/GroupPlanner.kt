@@ -5,7 +5,7 @@ import com.bestassistant.integrations.homeassistant.HomeAssistant.Entity
 
 /**
  * Turns "turn off all the lights in the kitchen" into Home Assistant service calls, from the
- * devices and areas Home Assistant itself lists, so a new light works without touching Cog.
+ * devices and areas Home Assistant itself lists, so a new light works without touching PocketSearch.
  * Only devices that need it are switched, so the count said back is what actually changed.
  */
 object GroupPlanner {

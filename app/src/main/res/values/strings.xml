@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Cog</string>
-    <string name="assist_label" translatable="false">Cog</string>
-    <string name="tile_label" translatable="false">Cog</string>
+    <string name="app_name" translatable="false">PocketSearch</string>
+    <string name="assist_label" translatable="false">PocketSearch</string>
+    <string name="tile_label" translatable="false">PocketSearch</string>
     <string name="shortcut_search_short">Search</string>
     <string name="shortcut_search_long">Search apps, contacts and the web</string>
 
@@ -28,7 +28,7 @@
     <string name="calc_degrees">%1$s  (degrees)</string>
     <string name="contacts_prompt_title">Search your contacts</string>
     <string name="contacts_prompt_body">Find people and call or text them from here</string>
-    <string name="clip_label">Cog result</string>
+    <string name="clip_label">PocketSearch result</string>
     <string name="copied">Copied</string>
     <string name="error_launch">Couldn\'t open that</string>
     <string name="error_no_app">No app can open this</string>
@@ -118,7 +118,7 @@
     <string name="error_torch">The flashlight isn\'t available right now</string>
     <string name="error_volume">Volume can\'t be changed while Do Not Disturb is on</string>
     <string name="error_no_number">No phone number for this contact</string>
-    <string name="error_media_access">To control music, allow media control in Cog settings.</string>
+    <string name="error_media_access">To control music, allow media control in PocketSearch settings.</string>
     <string name="error_no_player">Nothing is playing right now.</string>
     <string name="error_like">This player doesn\'t let me like songs.</string>
 
@@ -266,7 +266,7 @@
     <string name="action_fill">Use this search</string>
     <string name="action_voice">Ask by voice</string>
     <string name="action_stop_listening">Stop listening</string>
-    <string name="action_settings">Cog settings</string>
+    <string name="action_settings">PocketSearch settings</string>
     <string name="action_clear">Clear</string>
     <string name="action_read_aloud">Read aloud</string>
     <string name="action_set">Set</string>
@@ -280,11 +280,11 @@
 
     <!-- Settings -->
     <string name="try_it">Try it</string>
-    <string name="hero_setup_title">Make Cog your assistant</string>
-    <string name="hero_setup_body">Choose Cog as the digital assistant app and it opens instantly from the assistant gesture, keyboard ready.</string>
+    <string name="hero_setup_title">Make PocketSearch your assistant</string>
+    <string name="hero_setup_body">Choose PocketSearch as the digital assistant app and it opens instantly from the assistant gesture, keyboard ready.</string>
     <string name="hero_setup_action">Set as default assistant</string>
     <string name="hero_ready_title">You\'re all set</string>
-    <string name="hero_ready_body">Cog is your digital assistant. Use the assistant gesture anywhere, then type or speak.</string>
+    <string name="hero_ready_body">PocketSearch is your digital assistant. Use the assistant gesture anywhere, then type or speak.</string>
     <string name="step_assistant_title">Default digital assistant</string>
     <string name="step_assistant_body">Settings › Apps › Default apps › Digital assistant app</string>
     <string name="step_contacts_title">Contacts</string>
@@ -329,25 +329,12 @@
     <string name="speech_off">Off</string>
 
     <string name="section_voice">Voice</string>
-    <string name="pref_voice_style_title">Voice</string>
-    <string name="voice_cog">Cog</string>
-    <string name="voice_cog_body">A polite little robot with a metallic shimmer</string>
-    <string name="voice_natural">Natural</string>
-    <string name="voice_natural_body">The phone\'s voice, no effects</string>
-    <string name="voice_android">Android</string>
-    <string name="voice_android_body">The natural voice with a light electronic edge</string>
-    <string name="voice_classic">Classic robot</string>
-    <string name="voice_classic_body">Flat and buzzy, straight out of a 1950s film</string>
-    <string name="voice_tiny">Tiny bot</string>
-    <string name="voice_tiny_body">Small, quick and squeaky</string>
-    <string name="voice_big">Big bot</string>
-    <string name="voice_big_body">Deep, slow and heavy</string>
     <string name="pref_voice_gender_title">Voice type</string>
     <string name="pref_voice_gender_body">Phones often have only female voices for a language; a male voice is then made from one on the phone</string>
     <string name="gender_male">Male</string>
     <string name="gender_female">Female</string>
     <string name="pref_base_voice_title">Base voice</string>
-    <string name="pref_base_voice_body">The phone voice the effects are applied to</string>
+    <string name="pref_base_voice_body">The phone voice the assistant speaks with</string>
     <string name="base_voice_auto">Automatic</string>
     <string name="base_voice_item">%1$s · voice %2$d</string>
     <string name="base_voice_item_male">%1$s · voice %2$d · male</string>
@@ -413,7 +400,7 @@
     <string name="page_about">About</string>
     <string name="page_integrations">Integrations</string>
     <string name="summary_integrations_none">None installed</string>
-    <string name="integrations_intro">Integrations teach Cog about the services you use. Install the ones you want; each brings its own settings.</string>
+    <string name="integrations_intro">Integrations teach PocketSearch about the services you use. Install the ones you want; each brings its own settings.</string>
     <string name="integration_not_installed">Not installed</string>
     <string name="integration_installed">Installed</string>
     <string name="integration_copy">Copy %1$s</string>
@@ -431,14 +418,14 @@
     <string name="say_navigate_work">Plotting a course to work.</string>
     <string name="say_search">Searching the web for %1$s.</string>
     <string name="say_no_app">I could not find an app called %1$s.</string>
-    <string name="error_no_home">I do not know where home is yet. Add your home address in Cog settings, under Connections.</string>
-    <string name="error_no_work">I do not know where work is yet. Add your work address in Cog settings, under Connections.</string>
+    <string name="error_no_home">I do not know where home is yet. Add your home address in PocketSearch settings, under Connections.</string>
+    <string name="error_no_work">I do not know where work is yet. Add your work address in PocketSearch settings, under Connections.</string>
     <string name="error_integration_removed">That needs an integration that is no longer installed.</string>
     <string name="cmd_search">Search the web for “%1$s”</string>
     <string name="cmd_navigate_home">Directions home</string>
     <string name="cmd_navigate_work">Directions to work</string>
     <string name="cmd_map">%1$s on the map</string>
-    <string name="cmd_saved_place_missing">Add the address in Cog settings</string>
+    <string name="cmd_saved_place_missing">Add the address in PocketSearch settings</string>
     <string name="example_search">search for pizza near me</string>
     <string name="example_home">take me home</string>
     <string name="page_connections">Connections</string>
@@ -474,7 +461,7 @@
     <string name="ask_reminder_what">What shall I remind you about?</string>
     <string name="ask_reminder_when">When shall I remind you?</string>
     <string name="error_reminder_time">I did not catch a time. Try something like “at 5” or “in 20 minutes”.</string>
-    <string name="error_reminder_notifications">To remind you, I need to show notifications. Allow notifications for Cog in its app settings.</string>
+    <string name="error_reminder_notifications">To remind you, I need to show notifications. Allow notifications for PocketSearch in its app settings.</string>
     <string name="done_reminder">Reminder set for %1$s</string>
     <string name="reminder_when_in">in %1$s</string>
     <string name="reminder_when_today">today at %1$s</string>
@@ -491,14 +478,14 @@
         <item>Sunday</item>
     </string-array>
     <string name="reminder_channel">Reminders</string>
-    <string name="reminder_title">Reminder from Cog</string>
+    <string name="reminder_title">Reminder from PocketSearch</string>
     <string name="reminder_done">Done</string>
     <string name="reminder_snooze">In 10 minutes</string>
     <string name="cmd_reminder">Remind me: %1$s</string>
     <string name="cmd_reminder_plain">Reminder</string>
     <string name="cmd_reminder_today">Today, %1$s</string>
     <string name="cmd_reminder_tomorrow">Tomorrow, %1$s</string>
-    <string name="cmd_reminder_ask">Cog will ask when</string>
+    <string name="cmd_reminder_ask">PocketSearch will ask when</string>
     <string name="cmd_show_reminders">Your reminders</string>
     <string name="cmd_cancel_reminders">Cancel all reminders</string>
     <plurals name="cmd_reminders_count">
@@ -525,7 +512,7 @@
     <string name="say_parking_rough">Parking spot logged, though only to within about %1$d meters. Allowing precise location would help.</string>
     <string name="done_parking">Parking spot saved</string>
     <string name="error_no_fix">I am unable to find where you are right now. Is location turned on?</string>
-    <string name="error_location_permission">For that I require access to your location. Allow it for Cog in its app settings.</string>
+    <string name="error_location_permission">For that I require access to your location. Allow it for PocketSearch in its app settings.</string>
     <string name="error_no_parking">I have no record of where you parked. Next time, say “remember where I parked”.</string>
     <string name="parking_label">Your car</string>
     <string name="say_parked_just_now">You parked a moment ago.</string>

@@ -7,21 +7,24 @@ import org.junit.Test
 
 class WakePhraseTest {
 
+    private val pocket = WakePhrase.words("ok Pocket")
     private val cog = WakePhrase.words("ok Cog")
     private val computer = WakePhrase.words("hey computer")
 
     @Test
     fun phraseWordsMatchHowTheRecognizerWrites() {
-        assertEquals(listOf("okay", "cog"), WakePhrase.words("OK Cog"))
+        assertEquals(listOf("okay", "pocket"), WakePhrase.words("OK Pocket"))
         assertEquals(listOf("okay", "cog"), WakePhrase.words("O.K. cog!"))
         assertEquals(listOf("hey", "computer"), WakePhrase.words("Hey, computer"))
     }
 
     @Test
     fun findsThePhrase() {
-        assertNotNull(WakePhrase.find("okay cog", cog))
-        assertNotNull(WakePhrase.find("hey okay cog", cog))
-        assertEquals("set a timer for five minutes", WakePhrase.find("okay cog set a timer for five minutes", cog)?.rest)
+        assertNotNull(WakePhrase.find("okay pocket", pocket))
+        assertNotNull(WakePhrase.find("hey okay pocket", pocket))
+        assertEquals("set a timer for five minutes", WakePhrase.find("okay pocket set a timer for five minutes", pocket)?.rest)
+        // The recognizer sometimes adds or swaps a letter.
+        assertNotNull(WakePhrase.find("okay pockets", pocket))
         // One wrong letter in a longer word is tolerated.
         assertNotNull(WakePhrase.find("hey computor", computer))
     }
@@ -33,6 +36,10 @@ class WakePhraseTest {
             "the cog is broken", "okay let's go to the store", "okay").forEach {
             assertNull("'$it' should not trigger", WakePhrase.find(it, cog))
         }
+        // A different first sound is a different word.
+        listOf("okay rocket", "okay locket", "okay socket", "oh pocket", "my pocket is empty", "okay").forEach {
+            assertNull("'$it' should not trigger", WakePhrase.find(it, pocket))
+        }
         listOf("hey competitor", "hey company", "hey commute").forEach {
             assertNull("'$it' should not trigger", WakePhrase.find(it, computer))
         }
@@ -40,7 +47,7 @@ class WakePhraseTest {
 
     @Test
     fun validatesPhrases() {
-        assertNull(WakePhrase.validate("ok Cog"))
+        assertNull(WakePhrase.validate("ok Pocket"))
         assertNull(WakePhrase.validate("jarvis"))
         assertEquals(WakePhrase.Problem.EMPTY, WakePhrase.validate("  "))
         assertEquals(WakePhrase.Problem.TOO_SHORT, WakePhrase.validate("hey"))

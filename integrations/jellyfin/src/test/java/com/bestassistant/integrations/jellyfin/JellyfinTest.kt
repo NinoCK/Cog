@@ -117,7 +117,7 @@ class JellyfinTest {
         assertEquals(Transport.NEXT, (early("skip on jellyfin") as ControlRequest).action)
         val there = early("pause the movie on the bedroom tv") as ControlRequest
         assertEquals("bedroom tv", there.player)
-        // The phone's own media keys stay Cog's.
+        // The phone's own media keys stay PocketSearch's.
         assertNull(early("pause"))
         assertNull(early("open jellyfin"))
     }
@@ -220,7 +220,7 @@ class JellyfinTest {
                                   "ParentIndexNumber": 1, "IndexNumber": 1, "RunTimeTicks": 34800000000},
                "PlayState": {"PositionTicks": 6000000000, "IsPaused": true, "VolumeLevel": 80, "SubtitleStreamIndex": -1},
                "SupportedCommands": ["SetVolume", "Mute"]},
-              {"Id": "s2", "DeviceName": "Phone", "Client": "Cog", "DeviceId": "cog", "SupportsRemoteControl": false}
+              {"Id": "s2", "DeviceName": "Phone", "Client": "PocketSearch", "DeviceId": "cog", "SupportsRemoteControl": false}
             ]
         """.trimIndent()
         val players = Jellyfin.parsePlayers(body)

@@ -6,7 +6,6 @@ import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.core.content.edit
 import com.bestassistant.speech.VoiceGender
-import com.bestassistant.speech.VoiceStyle
 import com.fastsearch.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,8 +55,6 @@ data class AppSettings(
     /** Answer "what is ..." from Wikipedia. */
     val wikipedia: Boolean = true,
     val speech: SpeechMode = SpeechMode.ALWAYS,
-    val voiceStyle: VoiceStyle = VoiceStyle.COG,
-    /** Cog has a man's voice, so male by default. */
     val voiceGender: VoiceGender = VoiceGender.MALE,
     /** A text-to-speech voice name; null picks the best installed English voice. */
     val systemVoice: String? = null,
@@ -73,7 +70,10 @@ data class AppSettings(
     val workAddress: String = "",
 ) {
     companion object {
-        const val DEFAULT_WAKE_PHRASE = "ok Cog"
+        const val DEFAULT_WAKE_PHRASE = "ok Pocket"
+
+        /** The default before the app was renamed: whoever kept it gets the new one. */
+        const val OLD_DEFAULT_WAKE_PHRASE = "ok Cog"
     }
 }
 
@@ -135,7 +135,6 @@ class AppPreferences(context: Context) {
             putBoolean(KEY_RUN_SPOKEN, next.runSpokenCommands)
             putBoolean(KEY_WIKIPEDIA, next.wikipedia)
             putString(KEY_SPEECH, next.speech.name)
-            putString(KEY_VOICE_STYLE, next.voiceStyle.name)
             putString(KEY_VOICE_GENDER, next.voiceGender.name)
             putString(KEY_SYSTEM_VOICE, next.systemVoice)
             putBoolean(KEY_LISTEN_ON_OPEN, next.listenOnOpen)
@@ -163,12 +162,12 @@ class AppPreferences(context: Context) {
             runSpokenCommands = prefs.getBoolean(KEY_RUN_SPOKEN, defaults.runSpokenCommands),
             wikipedia = prefs.getBoolean(KEY_WIKIPEDIA, defaults.wikipedia),
             speech = runCatching { SpeechMode.valueOf(prefs.getString(KEY_SPEECH, null)!!) }.getOrDefault(defaults.speech),
-            voiceStyle = VoiceStyle.fromId(prefs.getString(KEY_VOICE_STYLE, null)),
             voiceGender = VoiceGender.fromId(prefs.getString(KEY_VOICE_GENDER, null)),
             systemVoice = prefs.getString(KEY_SYSTEM_VOICE, null),
             listenOnOpen = prefs.getBoolean(KEY_LISTEN_ON_OPEN, defaults.listenOnOpen),
             wakeWord = prefs.getBoolean(KEY_WAKE_WORD, defaults.wakeWord),
-            wakePhrase = prefs.getString(KEY_WAKE_PHRASE, null)?.takeIf { it.isNotBlank() } ?: defaults.wakePhrase,
+            wakePhrase = prefs.getString(KEY_WAKE_PHRASE, null)
+                ?.takeIf { it.isNotBlank() && it != AppSettings.OLD_DEFAULT_WAKE_PHRASE } ?: defaults.wakePhrase,
             navigationApp = runCatching { NavigationChoice.valueOf(prefs.getString(KEY_NAVIGATION_APP, null)!!) }
                 .getOrDefault(defaults.navigationApp),
             homeAddress = prefs.getString(KEY_HOME_ADDRESS, null).orEmpty(),
@@ -192,7 +191,6 @@ class AppPreferences(context: Context) {
         const val KEY_RUN_SPOKEN = "run_spoken_commands"
         const val KEY_WIKIPEDIA = "wikipedia"
         const val KEY_SPEECH = "speech"
-        const val KEY_VOICE_STYLE = "voice_style"
         const val KEY_VOICE_GENDER = "voice_gender"
         const val KEY_SYSTEM_VOICE = "system_voice"
         const val KEY_LISTEN_ON_OPEN = "listen_on_open"

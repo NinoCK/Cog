@@ -11,7 +11,7 @@ import java.util.Locale
  * modes, fan speeds, swing and temperature range, an air purifier's presets and speed, a light's
  * colours, whites and effects, a TV's volume and inputs, a vacuum's suction, and the extra selects,
  * numbers and switches its integration adds to the same device ("Child lock", "Favorite level").
- * Nothing about any device is written into Cog, so a new one just works.
+ * Nothing about any device is written into PocketSearch, so a new one just works.
  *
  * The device is the one whose name, area or kind best matches the words; the words left over say
  * which setting ("fan", "mode", "swing"), and the value has to be one the device offers.
@@ -62,12 +62,12 @@ object SettingPlanner {
         data class CantDo(val device: String) : Plan
 
         /**
-         * Locking, unlocking, arming or disarming it takes its code, which Cog won't take by voice:
+         * Locking, unlocking, arming or disarming it takes its code, which PocketSearch won't take by voice:
          * it would be said out loud and kept in the transcript.
          */
         data class NeedsCode(val device: String) : Plan
 
-        /** Nothing of theirs fits: left to Assist (a question, a name Cog doesn't know). */
+        /** Nothing of theirs fits: left to Assist (a question, a name PocketSearch doesn't know). */
         data object NotMine : Plan
     }
 
@@ -121,7 +121,7 @@ object SettingPlanner {
 
     private class Toggle(override val entity: Entity, override val aspect: Aspect?, override val label: String?, val call: (Boolean) -> Call) : Setting
 
-    /** The kinds of device Cog finds by name, the most specific first. */
+    /** The kinds of device PocketSearch finds by name, the most specific first. */
     private val PRIMARY = listOf(
         "climate", "humidifier", "water_heater", "fan", "light", "cover", "valve", "media_player", "vacuum", "lawn_mower", "lock",
         "alarm_control_panel", "remote", "switch", "input_boolean", "siren", "button", "input_button", "script", "scene",

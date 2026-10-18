@@ -154,7 +154,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Offline wake word ("ok Cog"): listens on the phone, opens the overlay when heard -->
+        <!-- Offline wake word ("ok Pocket"): listens on the phone, opens the overlay when heard -->
         <service
             android:name="com.bestassistant.wake.WakeWordService"
             android:exported="false"

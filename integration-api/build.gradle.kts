@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// What every integration is written against, and all Cog itself knows about any of them.
+// What every integration is written against, and all PocketSearch itself knows about any of them.
 plugins {
     alias(libs.plugins.android.library)
 }

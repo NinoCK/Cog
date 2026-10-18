@@ -76,7 +76,7 @@ import kotlinx.coroutines.launch
  */
 private var pendingResult: (suspend (Int, Intent?) -> Unit)? = null
 
-/** Every integration that comes with Cog: installed or not, and how each is set up. */
+/** Every integration that comes with PocketSearch: installed or not, and how each is set up. */
 @Composable
 internal fun IntegrationList(onOpen: (Integration) -> Unit) {
     val integrations = LocalContext.current.fastSearch.integrations

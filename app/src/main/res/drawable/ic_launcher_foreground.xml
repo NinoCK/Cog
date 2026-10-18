@@ -1,26 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A search lens with a lightning bolt: "fast search". Drawn inside the 66dp safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:translateX="0.25"
-        android:translateY="0.25">
-        <path
-            android:fillColor="#00000000"
-            android:pathData="M34,50 a16,16 0 1,0 32,0 a16,16 0 1,0 -32,0"
-            android:strokeWidth="6"
-            android:strokeColor="#FFFFFF" />
-        <path
-            android:fillColor="#00000000"
-            android:pathData="M62,62 L73,73"
-            android:strokeWidth="7"
-            android:strokeColor="#FFFFFF"
-            android:strokeLineCap="round" />
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M52.5,39 L43.5,52 L49.5,52 L47.5,61 L56.5,48 L50.5,48 Z" />
-    </group>
+    <!-- PocketSearch mark: a stitched pocket holding a search lens, the sibling of PocketCode's.
+         Sits inside the 66dp adaptive-icon safe zone. -->
+    <path android:fillColor="#FF5AA9F2" android:pathData="M38,32 H70 A5,5 0 0 1 75,37 V60.5 Q75,64.3 71.8,66.2 L56.6,75.1 Q54,76.6 51.4,75.1 L36.2,66.2 Q33,64.3 33,60.5 V37 A5,5 0 0 1 38,32 Z" />
+    <path android:fillColor="#FF12151B" android:fillAlpha="0.32" android:pathData="M37,38.2h2.6v1.4h-2.6z M41.4,38.2h2.6v1.4h-2.6z M45.8,38.2h2.6v1.4h-2.6z M50.2,38.2h2.6v1.4h-2.6z M54.6,38.2h2.6v1.4h-2.6z M59,38.2h2.6v1.4h-2.6z M63.4,38.2h2.6v1.4h-2.6z M67.8,38.2h2.6v1.4h-2.6z" />
+    <path android:strokeColor="#FF12151B" android:strokeWidth="3.2" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M44.5,54 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 M56.45,58.95 L63,65.5" />
 </vector>

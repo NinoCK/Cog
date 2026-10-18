@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- How the integration shows in Cog's settings -->
+    <!-- How the integration shows in PocketSearch's settings -->
     <string name="spotify_name">Spotify</string>
     <string name="spotify_description">Starts the artist, album, song or playlist you ask for in Spotify, and your own playlists by name.</string>
     <string name="section_press">Pressing play</string>
@@ -16,16 +16,16 @@
     <string name="playlist_kind_artist">Artist</string>
     <string name="playlist_kind_track">Song</string>
     <string name="playlist_kind_link">Spotify link</string>
-    <string name="press_service_label">Cog: press play in Spotify</string>
-    <string name="press_service_description">After you ask Cog to play an artist, album, song or playlist on Spotify, this taps the play button on the page Spotify opens, once. It only acts in Spotify, only for a few seconds after you ask, and reads nothing else.</string>
+    <string name="press_service_label">PocketSearch: press play in Spotify</string>
+    <string name="press_service_description">After you ask PocketSearch to play an artist, album, song or playlist on Spotify, this taps the play button on the page Spotify opens, once. It only acts in Spotify, only for a few seconds after you ask, and reads nothing else.</string>
     <string name="step_press_title">Press play in Spotify</string>
-    <string name="step_press_body">Spotify opens what you ask for but won\'t start it for other apps. This lets Cog tap its play button once, right after you ask; it only works inside Spotify. In the list, pick “Cog: press play in Spotify”. If the switch is greyed out: App info › ⋮ › Allow restricted settings.</string>
+    <string name="step_press_body">Spotify opens what you ask for but won\'t start it for other apps. This lets PocketSearch tap its play button once, right after you ask; it only works inside Spotify. In the list, pick “PocketSearch: press play in Spotify”. If the switch is greyed out: App info › ⋮ › Allow restricted settings.</string>
     <string name="section_spotify">Spotify connection</string>
-    <string name="spotify_connect_intro">Optional. With your own Spotify Client ID, Cog starts the music in Spotify by itself, through Spotify\'s official connection. Registering is free, but Spotify requires the account that registers to have Premium.</string>
+    <string name="spotify_connect_intro">Optional. With your own Spotify Client ID, PocketSearch starts the music in Spotify by itself, through Spotify\'s official connection. Registering is free, but Spotify requires the account that registers to have Premium.</string>
     <string name="spotify_step1">1. Open the Spotify developer dashboard, log in, and create an app. Under “Which API/SDKs are you planning to use?”, tick Android.</string>
     <string name="spotify_open_dashboard">Open the dashboard</string>
     <string name="spotify_step2">2. Add the redirect URI below under Redirect URIs, and the package name and SHA1 fingerprint under Android packages.</string>
-    <string name="spotify_step3">3. Copy your app\'s Client ID from the dashboard into the field below, tap Connect and allow Cog in Spotify.</string>
+    <string name="spotify_step3">3. Copy your app\'s Client ID from the dashboard into the field below, tap Connect and allow PocketSearch in Spotify.</string>
     <string name="spotify_redirect">Redirect URI</string>
     <string name="spotify_package">Package name</string>
     <string name="spotify_fingerprint">SHA1 fingerprint</string>
@@ -38,7 +38,7 @@
     <string name="spotify_status_no_spotify">Spotify isn\'t installed.</string>
     <string name="spotify_status_not_logged_in">Log in to Spotify first.</string>
     <string name="spotify_status_failed">Couldn\'t connect (%1$s). Check the Client ID, redirect URI, package name and fingerprint in the dashboard.</string>
-    <string name="spotify_status_ready">Tap Connect. Spotify will ask you to allow Cog, once.</string>
+    <string name="spotify_status_ready">Tap Connect. Spotify will ask you to allow PocketSearch, once.</string>
     <string name="spotify_status_authorizing">Waiting for your OK in Spotify…</string>
     <string name="spotify_status_timeout">Spotify didn\'t answer. Open the Spotify app, make sure you\'re logged in, then tap Connect again.</string>
     <string name="spotify_status_refused">Spotify said no: %1$s. Check that the dashboard has exactly this redirect URI, package name and fingerprint.</string>

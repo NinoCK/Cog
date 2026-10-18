@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="18 18 72 72">
+  <!-- PocketSearch launcher icon (app/src/main/res/drawable/ic_launcher_*.xml) under a squircle mask. -->
+  <defs>
+    <clipPath id="squircle">
+      <rect x="18" y="18" width="72" height="72" rx="22"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#squircle)">
+    <path fill="#12151B" d="M0,0h108v108h-108z"/>
+    <path fill="#5AA9F2" d="M38,32 H70 A5,5 0 0 1 75,37 V60.5 Q75,64.3 71.8,66.2 L56.6,75.1 Q54,76.6 51.4,75.1 L36.2,66.2 Q33,64.3 33,60.5 V37 A5,5 0 0 1 38,32 Z"/>
+    <path fill="#12151B" fill-opacity="0.32" d="M37,38.2h2.6v1.4h-2.6z M41.4,38.2h2.6v1.4h-2.6z M45.8,38.2h2.6v1.4h-2.6z M50.2,38.2h2.6v1.4h-2.6z M54.6,38.2h2.6v1.4h-2.6z M59,38.2h2.6v1.4h-2.6z M63.4,38.2h2.6v1.4h-2.6z M67.8,38.2h2.6v1.4h-2.6z"/>
+    <path fill="none" stroke="#12151B" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="M44.5,54 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 M56.45,58.95 L63,65.5"/>
+  </g>
+</svg>

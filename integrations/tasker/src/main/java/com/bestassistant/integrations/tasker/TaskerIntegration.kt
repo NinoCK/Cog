@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /**
- * The user's Tasker tasks, run by name ("run the task called lights out"), once Tasker lets Cog:
- * Cog asks for its run-tasks permission here, and Tasker's own Allow External Access must be on.
+ * The user's Tasker tasks, run by name ("run the task called lights out"), once Tasker lets PocketSearch:
+ * PocketSearch asks for its run-tasks permission here, and Tasker's own Allow External Access must be on.
  */
 class TaskerIntegration(private val host: IntegrationHost) : Integration {
 
@@ -89,7 +89,7 @@ class TaskerIntegration(private val host: IntegrationHost) : Integration {
         Tasker.Status.NO_EXTERNAL_ACCESS -> Report(s(R.string.tasker_status_access))
     }
 
-    /** Android's own "Allow Cog to run Tasker tasks?", or, once that's been refused for good, Cog's page in Android's settings. */
+    /** Android's own "Allow PocketSearch to run Tasker tasks?", or, once that's been refused for good, PocketSearch's page in Android's settings. */
     private fun allow(actions: Actions) {
         val activity = actions.activity
         if (store.get(KEY_ASKED) == "true" && !activity.shouldShowRequestPermissionRationale(Tasker.PERMISSION_RUN_TASKS)) {
@@ -112,7 +112,7 @@ class TaskerIntegration(private val host: IntegrationHost) : Integration {
     companion object {
         const val ID = "tasker"
 
-        /** Whether Cog has asked for the run-tasks permission before: refused again after that, it's refused for good. */
+        /** Whether PocketSearch has asked for the run-tasks permission before: refused again after that, it's refused for good. */
         private const val KEY_ASKED = "asked_permission"
 
         // ActivityResultContracts.RequestMultiplePermissions' own intent, without depending on androidx.activity for two names.

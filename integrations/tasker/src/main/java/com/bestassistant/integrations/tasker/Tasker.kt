@@ -10,7 +10,7 @@ import java.util.UUID
 
 /**
  * Runs the user's Tasker tasks by name, the way Tasker documents for other apps (its TaskerIntent):
- * a broadcast that Tasker accepts once the user allows Cog to run tasks (a runtime permission) and
+ * a broadcast that Tasker accepts once the user allows PocketSearch to run tasks (a runtime permission) and
  * turns on Preferences › Misc › Allow External Access in Tasker.
  */
 internal class Tasker(private val context: Context) {

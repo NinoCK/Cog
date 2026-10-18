@@ -61,7 +61,7 @@ class WikipediaClient {
                 connectTimeout = 4_000
                 readTimeout = 5_000
                 // Wikimedia asks API clients to identify themselves.
-                setRequestProperty("User-Agent", "Cog/1.0 (Android; privacy-first assistant)")
+                setRequestProperty("User-Agent", "PocketSearch/1.0 (Android; privacy-first assistant)")
                 setRequestProperty("Accept", "application/json")
             }
             try {

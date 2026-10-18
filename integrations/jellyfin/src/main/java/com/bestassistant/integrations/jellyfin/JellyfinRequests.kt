@@ -85,7 +85,7 @@ data class MarkRequest(val title: String?, val watched: Boolean, override val sa
  * the name of a movie or show on the server ([library]), so "play thriller" stays music unless
  * there's a movie by that name.
  *
- * Early, before music, for all of that; late, after everything Cog does itself, "watch ..." with
+ * Early, before music, for all of that; late, after everything PocketSearch does itself, "watch ..." with
  * any name, which nothing else takes.
  */
 class JellyfinRequests(private val ready: () -> Boolean, private val library: Library) : RequestParser {

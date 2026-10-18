@@ -63,7 +63,7 @@ class HomeAssistantIntegration(private val host: IntegrationHost) : Integration 
         Setting.Note(s(R.string.ha_fallback_note), small = true),
     )
 
-    /** Whether the address and token work and, when they do, what Cog sees: so a device it doesn't find can be told apart from one it misheard. */
+    /** Whether the address and token work and, when they do, what PocketSearch sees: so a device it doesn't find can be told apart from one it misheard. */
     private suspend fun check(): Report = when (home.check()) {
         is HomeAssistant.Reply.Done -> {
             val seen = home.seen()
@@ -85,7 +85,7 @@ class HomeAssistantIntegration(private val host: IntegrationHost) : Integration 
     private suspend fun smartHome(command: HomeRequest): Step {
         command.query?.let { query -> homeQuery(query)?.let { return it } }
         command.group?.let { group -> homeGroup(group)?.let { return it } }
-        // "Turn on the desk AC", "set it to cooling": Cog's own, from the devices Home Assistant
+        // "Turn on the desk AC", "set it to cooling": PocketSearch's own, from the devices Home Assistant
         // lists and what each says it can do. Assist only gets what none of them fits.
         command.setting?.let { setting -> homeSetting(setting)?.let { return it } }
         return when (val reply = home.process(command.text, "en")) {
@@ -471,7 +471,7 @@ class HomeAssistantIntegration(private val host: IntegrationHost) : Integration 
         if (!home.isSetUp) return null
         return when (val reply = home.process(said, "en")) {
             is HomeAssistant.Reply.Done -> assistDone(reply)
-            // A device with a name Cog doesn't know as one ("set Kevin to sleep mode") may still have that setting.
+            // A device with a name PocketSearch doesn't know as one ("set Kevin to sleep mode") may still have that setting.
             is HomeAssistant.Reply.Refused -> HomeSettings.loose(host.normalize(said))?.let { homeSetting(it) }
                 ?: Step.Failed(reply.speech ?: s(R.string.error_ha_not_understood))
             HomeAssistant.Reply.NotUnderstood -> HomeSettings.loose(host.normalize(said))?.let { homeSetting(it) }
@@ -483,7 +483,7 @@ class HomeAssistantIntegration(private val host: IntegrationHost) : Integration 
     companion object {
         const val ID = "home_assistant"
 
-        /** Where its address and token are kept: what Cog's settings used to keep them under is moved here once. */
+        /** Where its address and token are kept: what PocketSearch's settings used to keep them under is moved here once. */
         const val KEY_URL = "url"
         const val KEY_TOKEN = "token"
 

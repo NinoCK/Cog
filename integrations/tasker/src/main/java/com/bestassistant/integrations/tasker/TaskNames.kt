@@ -5,7 +5,7 @@ import kotlin.math.min
 
 /**
  * Which of the user's task names they meant ("lights out" -> "Lights Out", "bedtime" -> "Bedtime
- * Routine"), with the kinds of match Cog's own search counts as good ones, best first: the whole
+ * Routine"), with the kinds of match PocketSearch's own search counts as good ones, best first: the whole
  * name, its start, a word's start, its words in order, its initials, then part of it.
  */
 internal object TaskNames {

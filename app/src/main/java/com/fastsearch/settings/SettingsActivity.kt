@@ -338,7 +338,7 @@ private fun SettingsScreen(
                     }
                     item {
                         Group {
-                            PageRow(Icons.Rounded.RecordVoiceOver, R.string.section_voice, stringResource(settings.voiceStyle.label)) {
+                            PageRow(Icons.Rounded.RecordVoiceOver, R.string.section_voice, stringResource(settings.voiceGender.label)) {
                                 page = SettingsPage.VOICE
                             }
                             PageRow(Icons.Rounded.Assistant, R.string.section_assistant_settings, stringResource(R.string.summary_assistant_settings)) {

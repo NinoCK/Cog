@@ -22,7 +22,6 @@ import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Hearing
 import androidx.compose.material.icons.rounded.Wc
 import androidx.compose.material.icons.rounded.RecordVoiceOver
-import androidx.compose.material.icons.rounded.SmartToy
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
@@ -57,7 +56,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.bestassistant.speech.VoiceGender
 import com.bestassistant.speech.VoiceOption
-import com.bestassistant.speech.VoiceStyle
 import com.bestassistant.wake.WakeControl
 import com.bestassistant.wake.WakeModel
 import com.bestassistant.wake.WakePhrase
@@ -65,7 +63,7 @@ import com.fastsearch.R
 import com.fastsearch.data.AppSettings
 import com.fastsearch.fastSearch
 
-/** The voice styles, each previewed by speaking a line in it. */
+/** Which kind of voice and which of the phone's voices, each previewed by speaking a line. */
 @Composable
 internal fun VoiceSection(settings: AppSettings, update: ((AppSettings) -> AppSettings) -> Unit) {
     val context = LocalContext.current
@@ -100,23 +98,6 @@ internal fun VoiceSection(settings: AppSettings, update: ((AppSettings) -> AppSe
         }
     }
 
-    VoiceStyle.entries.forEach { style ->
-        ListItem(
-            modifier = Modifier.selectable(selected = settings.voiceStyle == style, role = Role.RadioButton) {
-                update { it.copy(voiceStyle = style) }
-                speak()
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            leadingContent = { RadioButton(selected = settings.voiceStyle == style, onClick = null) },
-            headlineContent = { Text(stringResource(style.label)) },
-            supportingContent = { Text(stringResource(style.description)) },
-            trailingContent = if (style == VoiceStyle.COG) {
-                { Icon(Icons.Rounded.SmartToy, contentDescription = null) }
-            } else {
-                null
-            },
-        )
-    }
     ListItem(
         modifier = Modifier.clickable { voiceDialog = true },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),

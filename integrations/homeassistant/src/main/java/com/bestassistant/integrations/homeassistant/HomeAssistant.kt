@@ -41,7 +41,7 @@ class HomeAssistant(private val address: () -> String, private val token: () -> 
         val base = baseUrl(address()) ?: return Reply.NotSetUp
         val key = token().trim().ifEmpty { return Reply.NotSetUp }
         val body = JSONObject().put("text", text).put("language", language)
-        // The built-in agent first: the user's own default may be a language model, which Cog avoids.
+        // The built-in agent first: the user's own default may be a language model, which PocketSearch avoids.
         var response = post("$base/api/conversation/process", key, JSONObject(body.toString()).put("agent_id", BUILT_IN_AGENT))
         if (response is Http.Status && response.code in setOf(400, 404, 422)) {
             response = post("$base/api/conversation/process", key, body)
@@ -88,7 +88,7 @@ class HomeAssistant(private val address: () -> String, private val token: () -> 
 
     /**
      * Every light, switch, fan, cover, media player, thermostat, lock, vacuum and so on, with its
-     * area and state, read fresh from Home Assistant: nothing has to be set up in Cog for each
+     * area and state, read fresh from Home Assistant: nothing has to be set up in PocketSearch for each
      * device. [sensors] adds sensors, binary sensors and people, for questions about the house.
      */
     suspend fun devices(sensors: Boolean = false): Devices {
@@ -127,7 +127,7 @@ class HomeAssistant(private val address: () -> String, private val token: () -> 
     }
 
     /**
-     * What Cog sees in Home Assistant, for the settings screen: how many devices of each kind
+     * What PocketSearch sees in Home Assistant, for the settings screen: how many devices of each kind
      * ("light" to 7), the air conditioners by name, and how many areas (null: this token can't list them).
      */
     data class Seen(val counts: Map<String, Int>, val airConditioners: List<String>, val areas: Int?)
@@ -188,7 +188,7 @@ class HomeAssistant(private val address: () -> String, private val token: () -> 
         private const val TAG = "HomeAssistant"
         private const val BUILT_IN_AGENT = "conversation.home_assistant"
 
-        /** What Cog can switch, set or choose: the kinds of [DeviceKind], and the settings devices come with. */
+        /** What PocketSearch can switch, set or choose: the kinds of [DeviceKind], and the settings devices come with. */
         private val DOMAINS = DeviceKind.entries.map { it.domain } + listOf(
             "humidifier", "water_heater", "select", "number", "input_boolean", "script", "scene", "siren", "remote",
             "vacuum", "lawn_mower", "alarm_control_panel", "button", "input_button",

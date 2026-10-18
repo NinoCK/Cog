@@ -14,10 +14,10 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Cog"
+rootProject.name = "PocketSearch"
 include(":app")
 // The contract integrations are written against, and the integrations themselves: each its own
-// module, installed (or not) from Cog's settings.
+// module, installed (or not) from PocketSearch's settings.
 include(":integration-api")
 include(":integrations:homeassistant")
 include(":integrations:jellyfin")

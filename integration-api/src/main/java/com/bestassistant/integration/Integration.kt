@@ -7,13 +7,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * One outside service Cog can work with (Home Assistant, Spotify), as a module of its own. The
- * user installs it from Cog's settings, where its [settings] then appear; until then Cog neither
+ * One outside service PocketSearch can work with (Home Assistant, Spotify), as a module of its own. The
+ * user installs it from PocketSearch's settings, where its [settings] then appear; until then PocketSearch neither
  * understands its requests nor offers anything to it.
  *
- * An integration adds requests to what Cog understands ([parser], [plan], [card]), may take the
- * spoken requests nothing else understood ([fallback]), and may be the way Cog plays music in an
- * app ([music]). Everything else it needs from Cog comes through its [IntegrationHost].
+ * An integration adds requests to what PocketSearch understands ([parser], [plan], [card]), may take the
+ * spoken requests nothing else understood ([fallback]), and may be the way PocketSearch plays music in an
+ * app ([music]). Everything else it needs from PocketSearch comes through its [IntegrationHost].
  */
 interface Integration {
 
@@ -59,14 +59,14 @@ interface Integration {
 }
 
 /**
- * Finds an integration's requests in what the user said. Cog asks at two points in its own order
+ * Finds an integration's requests in what the user said. PocketSearch asks at two points in its own order
  * of matching ([Slot]), always with [text] already normalised: lowercase, without "please" and the like.
  */
 fun interface RequestParser {
     fun parse(text: String, slot: Slot): Request?
 }
 
-/** Where in Cog's own order of matching an integration is asked about what was said. */
+/** Where in PocketSearch's own order of matching an integration is asked about what was said. */
 enum class Slot {
     /**
      * Right after the phone's own controls (timers, alarms, the torch, volume, play and pause),
@@ -75,7 +75,7 @@ enum class Slot {
      */
     EARLY,
 
-    /** After everything Cog does itself, just before it searches the web for what was said. */
+    /** After everything PocketSearch does itself, just before it searches the web for what was said. */
     LATE,
 }
 
@@ -85,12 +85,12 @@ interface Request
 /** A request's row in the results: what will happen. */
 data class Card(val title: String, val subtitle: String)
 
-/** What an integration may use of Cog. */
+/** What an integration may use of PocketSearch. */
 interface IntegrationHost {
     /** The application. */
     val context: Context
 
-    /** Resources in the assistant's language, for what Cog says and shows. */
+    /** Resources in the assistant's language, for what PocketSearch says and shows. */
     val strings: Context
 
     /** Lives as long as the app, for work that must outlive a screen. */

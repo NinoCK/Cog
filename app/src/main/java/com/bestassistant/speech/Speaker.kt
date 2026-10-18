@@ -59,8 +59,8 @@ data class VoiceOption(
  * Engines don't say which voices are male or female, so each voice's pitch is measured once
  * (and remembered). A male or female voice is used when the phone has one; otherwise the voice
  * is resampled to move its formants and pitch, with the engine speaking faster or slower to keep
- * the tempo. Robot styles and gender changes synthesise each sentence to a file, process it,
- * and stream it to an AudioTrack while the next sentence is being prepared.
+ * the tempo. A reshaped voice is synthesised a sentence at a time to a file, resampled, and
+ * streamed to an AudioTrack while the next sentence is being prepared.
  */
 class Speaker(private val context: Context, private val preferences: AppPreferences) {
 
@@ -120,7 +120,7 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         job = scope.launch {
             var handedOff = false
             try {
-                handedOff = say(engine, text, settings.voiceStyle, settings.voiceGender == VoiceGender.MALE, settings.systemVoice, then)
+                handedOff = say(engine, text, settings.voiceGender == VoiceGender.MALE, settings.systemVoice, then)
             } finally {
                 // The engine's own playback gives the focus back when it finishes (onDone).
                 if (!handedOff) {
@@ -150,7 +150,7 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
     /** A short robotic "bee-boop": the assistant heard its name. */
     fun chirp() {
         scope.launch {
-            val samples = RobotVoice.chirp(CHIRP_RATE)
+            val samples = Chirp.samples(CHIRP_RATE)
             val chirp = runCatching {
                 AudioTrack.Builder()
                     .setAudioAttributes(attributes)
@@ -209,13 +209,12 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
     // region Choosing and shaping the voice
 
     /** Speaks [text]; true when the engine plays it directly (and will release the audio focus). */
-    private suspend fun say(engine: TextToSpeech, text: String, style: VoiceStyle, male: Boolean, chosen: String?, then: (() -> Unit)?): Boolean {
-        val voice = pickVoice(engine, style, male, chosen)
+    private suspend fun say(engine: TextToSpeech, text: String, male: Boolean, chosen: String?, then: (() -> Unit)?): Boolean {
+        val voice = pickVoice(engine, male, chosen)
         val shift = Pitch.shiftFor(voice?.let { pitchOf(engine, it) }, male)
-        val pitch = style.pitch * shift.pitch
-        val rate = style.rate * shift.factor
-        val effect = style.effect
-        if (effect == null && !shift.changesSound) {
+        val pitch = shift.pitch
+        val rate = shift.factor
+        if (!shift.changesSound) {
             engineLock.withLock {
                 apply(engine, voice, pitch, rate)
                 val id = "reply-${counter.getAndIncrement()}"
@@ -224,7 +223,7 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
             }
             return true
         }
-        speakProcessed(engine, text, voice, pitch, rate, shift.factor, effect)
+        speakProcessed(engine, text, voice, pitch, rate, shift.factor)
         return false
     }
 
@@ -232,13 +231,12 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
      * The user's pick if they made one; otherwise the best installed voice for the language,
      * preferring one already known to be the wanted gender (it then needs no reshaping).
      */
-    private fun pickVoice(engine: TextToSpeech, style: VoiceStyle, male: Boolean, chosen: String?): Voice? {
+    private fun pickVoice(engine: TextToSpeech, male: Boolean, chosen: String?): Voice? {
         val locale = AppLanguage.locale
         val candidates = installedVoices(engine).filter { it.locale.language == locale.language }
         candidates.firstOrNull { it.name == chosen }?.let { return it }
         val ranked = candidates.sortedWith(
-            compareByDescending<Voice> { style.prefersBritish && it.locale.country == "GB" }
-                .thenByDescending { it.locale.country == locale.country }
+            compareByDescending<Voice> { it.locale.country == locale.country }
                 .thenByDescending { it.quality },
         )
         return ranked.firstOrNull { voice -> knownPitch(voice.name)?.let { (it < Pitch.MALE_BELOW) == male } == true }
@@ -283,16 +281,13 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
         pitch: Float,
         rate: Float,
         stretch: Float,
-        effect: RobotEffect?,
     ) = coroutineScope {
         val chunks = Channel<Pcm>(capacity = 2)
         launch {
             try {
                 for (sentence in sentences(text)) {
                     val pcm = synthesize(engine, sentence, voice, pitch, rate) ?: continue
-                    var samples = Pitch.resample(pcm.samples, stretch)
-                    if (effect != null) samples = RobotVoice.process(samples, pcm.rate, effect)
-                    chunks.send(Pcm(samples, pcm.rate))
+                    chunks.send(Pcm(Pitch.resample(pcm.samples, stretch), pcm.rate))
                 }
             } finally {
                 chunks.close()
@@ -394,7 +389,7 @@ class Speaker(private val context: Context, private val preferences: AppPreferen
                 // Measure the voice ahead of the first reply, so that reply isn't delayed by it.
                 val settings = preferences.settings.value
                 scope.launch {
-                    pickVoice(engine, settings.voiceStyle, settings.voiceGender == VoiceGender.MALE, settings.systemVoice)
+                    pickVoice(engine, settings.voiceGender == VoiceGender.MALE, settings.systemVoice)
                         ?.let { pitchOf(engine, it) }
                 }
             }

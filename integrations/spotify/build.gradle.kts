@@ -34,7 +34,7 @@ dependencies {
     // Spotify app when the user has added their own Client ID. Gson is its JSON mapper.
     implementation(files("libs/spotify-app-remote-release-0.8.0.aar"))
     implementation(libs.gson)
-    // Spotify's sign-in library (same release, v2.1.0): asks for the user's OK from Cog's own screen,
+    // Spotify's sign-in library (same release, v2.1.0): asks for the user's OK from PocketSearch's own screen,
     // inside the Spotify app; AndroidX Browser is its fallback when Spotify isn't installed. It needs
     // the app to say where sign-in returns to: see the manifest placeholders in the app's build.
     implementation(files("libs/spotify-auth-release-2.1.0.aar"))

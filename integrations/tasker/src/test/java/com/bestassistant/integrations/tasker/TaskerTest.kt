@@ -24,7 +24,7 @@ class TaskerTest {
         assertNull(task("tasker"))
         assertNull(task("run spotify"))
         assertNull(task("open tasker"))
-        // Only asked late, after everything Cog does itself.
+        // Only asked late, after everything PocketSearch does itself.
         assertNull(TaskRequests.parse("run the task called lights out", Slot.EARLY))
     }
 

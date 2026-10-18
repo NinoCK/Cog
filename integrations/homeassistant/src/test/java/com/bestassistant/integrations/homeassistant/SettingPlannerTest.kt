@@ -179,7 +179,7 @@ class SettingPlannerTest {
         assertEquals(Plan.Ambiguous(listOf("Living room AC", "Bedroom AC"), listOf("Living Room", "Bedroom")), which)
         // Just "desk": the AC or the lamp?
         assertTrue(plan("the desk", word("on")) is Plan.Ambiguous)
-        // No AC at all that Cog can see: say so, never hand "desk ac" to Assist (which switched the lamp).
+        // No AC at all that PocketSearch can see: say so, never hand "desk ac" to Assist (which switched the lamp).
         assertEquals(Plan.NotFound("desk ac"), plan("desk ac", word("on"), listOf(deskLight, purifier)))
         // "Turn on the AC" with one running and one off: the one that's off.
         assertEquals(listOf("climate.bedroom_ac"), (plan("the ac", word("on"), listOf(livingAc, bedroomAc.copy(state = "off"))) as Plan.Act).calls.single().entityIds)
@@ -221,7 +221,7 @@ class SettingPlannerTest {
             Plan.OutOfRange("Bedroom AC", Aspect.TEMPERATURE, null, 16.0, 30.0, NumberUnit.DEGREES),
             plan("the bedroom ac", SettingValue.Number(35.0)),
         )
-        // A device Cog can't find is Assist's.
+        // A device PocketSearch can't find is Assist's.
         assertEquals(Plan.NotMine, plan("the garage", SettingValue.Number(3.0)))
     }
 
